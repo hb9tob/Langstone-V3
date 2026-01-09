@@ -56,7 +56,7 @@ The preferred installation method only needs a Windows PC connected to the same 
 
 - Download and install the Raspberry Pi Imager utility from https://downloads.raspberrypi.org/imager/imager_latest.exe 
 
-- Start the Imager Utility, Select 'Raspberry Pi 5' or 'Raspberry Pi 4' as the Raspberry Pi Device. Select 'Raspberry Pi OS (Other)'' then 'Raspberry Pi OS Lite (64 Bit)'' as the operating system.
+- Start the Imager Utility, Select 'Raspberry Pi 5' as the Raspberry Pi Device. Select 'Raspberry Pi OS (Other)'' then 'Raspberry Pi OS Lite (64 Bit)'' as the operating system.
 
 - Insert your micro SD card into a card reader and select that device for the Storage.  Note:- Ignore and close any message boxes about reformatting the drive. This is not needed. 
 
