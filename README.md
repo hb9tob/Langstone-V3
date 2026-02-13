@@ -66,7 +66,7 @@ The preferred installation method only needs a Windows PC connected to the same 
 
 - Insert your micro SD card into a card reader and select that device for the Storage.  Note:- Ignore and close any message boxes about reformatting the drive. This is not needed. 
 
-- When asked to choose a Hostnam, you can choose anything you like or leave it at the Suggested Name.
+- When asked to choose a Hostname, you can choose anything you like or leave it at the Suggested Name.
 
 - Set Your City, TimeZone and keyboard layout. You can normally accept the default settings.
 
