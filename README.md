@@ -54,17 +54,31 @@ The software consists of two parts. The SDR itself uses a python GNURadio Flowgr
 
 The preferred installation method only needs a Windows PC connected to the same (internet-connected) network as your Raspberry Pi.  Do not connect a keyboard or HDMI display directly to your Raspberry Pi.
 
-- Download and install the Raspberry Pi Imager utility from https://downloads.raspberrypi.org/imager/imager_latest.exe 
+- Download and install the Raspberry Pi Imager utility from https://downloads.raspberrypi.org/imager/imager_latest.exe
+ 
+- These instructions are based on verdsion 2.0.6 of the Imager program. Other versions may differ but you should try to acheive the same settings. 
 
-- Start the Imager Utility, Select 'Raspberry Pi 5' as the Raspberry Pi Device. Select 'Raspberry Pi OS (Other)'' then 'Raspberry Pi OS Lite (64 Bit)'' as the operating system.
+- Start the Imager Utility, Select 'Raspberry Pi 5' as the Raspberry Pi Device.
+
+-  Select 'Raspberry Pi OS (Other)' then 'Raspberry Pi OS Lite (64 Bit)' as the operating system.
+
+- **Note... It is important to check that you have selected the Lite version of the OS and not the Full version.** 
 
 - Insert your micro SD card into a card reader and select that device for the Storage.  Note:- Ignore and close any message boxes about reformatting the drive. This is not needed. 
 
-- When asked 'Use OS customisation' Select 'EDIT SETTINGS' then select 'Services' make sure that 'Enable SSH' is ticked and 'Use password authentication' is selected.
+- When asked to choose a Hostnam, you can choose anything you like or leave it at the Suggested Name.
 
-- If you are required to set the username and password use pi and raspberry. 
+- Set Your City, TimeZone and keyboard layout. You can normally accept the default settings.
 
-- Click Save, then click 'YES' to start writing the SD card.
+- Set the username to 'pi' and the password to 'raspberry'
+
+- Leave the WIFI settings Blank
+ 
+- Selact 'Enable SSH' and 'Use Password authentication'
+
+- Disable Raspberry Pi Connect
+
+- Finally Click 'WRITE' to start writing the SD card.
 
 - Make sure you use a good quality class 10 Micro-SD Card. (16GB is OK) The performance of the Raspberry Pi can be badly affected by poor quality cards. 
 
@@ -95,7 +109,7 @@ The initial build can take some time, however it does not need any user input, s
 
 # Updating the Software. 
 
-If you have a running Langstone you can update by doing the following. 
+If you have a running Langstone-V3 you can update by doing the following. 
 
 Log into the Pi using SSH as described above. 
 
