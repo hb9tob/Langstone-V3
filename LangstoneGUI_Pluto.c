@@ -17,6 +17,7 @@
 #include <netinet/in.h>                                                                                                      
 #include <arpa/inet.h>
 
+#define MAX_FILENAME_LENGTH 255
 
 //#define PLUTOIP "ip:pluto.local"
 
@@ -106,6 +107,9 @@ int minGain(double freq);
 int maxGain(double freq);
 void setDialLock(int d);
 void setBeacon(int b);
+
+FILE *openFile( char *fn, char *mode );
+
 int firstpass=1;
 double freq;
 double freqInc=0.001;
@@ -1056,7 +1060,7 @@ void detectHw()
   fclose(fp);
   if(ln)  free(ln);
   
-  if ((fp = fopen("$HOME/rpidatv/bin/rpidatvgui", "r")))                      //test to see if Portsdown file is present. If so we change the exit behaviour. 
+  if ((fp = openFile("rpidatv/bin/rpidatvgui", "r")))                      //test to see if Portsdown file is present. If so we change the exit behaviour. 
   {
     fclose(fp);
     portsdownPresent=1;
@@ -3740,7 +3744,7 @@ char variable[50];
 char value[100];
 char vname[20];
 
-conffile=fopen("$HOME/Langstone/Langstone_Pluto.conf","r");
+conffile = openFile("Langstone/Langstone_Pluto.conf", "r");
 
 if(conffile==NULL)
   {
@@ -3862,7 +3866,7 @@ for(int i=0;i<MORSEIDENTLENGTH;i++)                                             
   }
 
 
-conffile=fopen("$HOME/Langstone/Langstone_Pluto.conf","w");
+conffile = openFile("Langstone/Langstone_Pluto.conf", "w");
 
 if(conffile==NULL)
   {
@@ -3936,4 +3940,39 @@ void restartGNURadio(void)
    startGNURadio();  
    sleep(2);
    initSDR();
+}
+
+FILE *openFile(char *fn, char *mode)
+{
+  char filename[MAX_FILENAME_LENGTH] = {0};
+  int fnlen = 0;
+
+  /* find user path i.e. /home/pi */
+  char *userpath = getenv("HOME");
+  if (userpath == NULL)
+  {
+    printf("Can read HOME env variable");      // TODO: Move to separate logfile
+    return NULL;
+  }
+
+  /* allocate space for filename */
+  fnlen = snprintf(NULL, 0, "%s/%s", userpath, fn);
+  if (fnlen > MAX_FILENAME_LENGTH)
+  {
+    printf("Filename greater than %i characters\n", MAX_FILENAME_LENGTH);       // TODO: Move to separate logfile
+    return NULL;
+  }
+
+  memset(filename, 0, MAX_FILENAME_LENGTH);       // trust no one
+
+  /* put it all together */
+  int retval = snprintf(filename, MAX_FILENAME_LENGTH, "%s/%s", userpath, fn);
+  if (retval != fnlen)
+  {
+    printf("Can't generate filename correctly, ignored\n");     // TODO: Move to separate logfile
+    return NULL;
+  }
+
+  /* try to get file handle */
+  return fopen(filename, mode);
 }
