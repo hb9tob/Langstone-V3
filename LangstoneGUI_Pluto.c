@@ -206,16 +206,16 @@ int CTCSSTone[NUMCTCSS] = {0,670,693,719,744,770,797,825,854,885,915,948,974,100
 #define diallockX 316
 #define diallockY 15
 
-// Arrow buttons (42x42) arranged as a d-pad on the right side, between RIT and Vol buttons
-#define arrowButtonSize 42
-#define arrowUpX    705
-#define arrowUpY    168
-#define arrowDownX  705
-#define arrowDownY  254
-#define arrowLeftX  660
-#define arrowLeftY  211
-#define arrowRightX 750
-#define arrowRightY 211
+// Arrow buttons (40x40) arranged as a d-pad on the left side, below freq display, left of waterfall
+#define arrowButtonSize 40
+#define arrowUpX     48
+#define arrowUpY    170
+#define arrowDownX   48
+#define arrowDownY  256
+#define arrowLeftX    5
+#define arrowLeftY  213
+#define arrowRightX  91
+#define arrowRightY 213
 
 
 
