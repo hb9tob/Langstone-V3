@@ -206,16 +206,17 @@ int CTCSSTone[NUMCTCSS] = {0,670,693,719,744,770,797,825,854,885,915,948,974,100
 #define diallockX 316
 #define diallockY 15
 
-// Arrow buttons (40x40) arranged as a d-pad on the left side, below freq display, left of waterfall
-#define arrowButtonSize 40
-#define arrowUpX     48
-#define arrowUpY    170
-#define arrowDownX   48
-#define arrowDownY  256
+// Arrow buttons (35x35) arranged as a d-pad on the left side, just below RIT button 2 (y=165)
+// Total height: 3*35 + 2*1 = 107px  =>  y=168 to y=274, clears SQL value display at y=275
+#define arrowButtonSize 35
+#define arrowUpX     41
+#define arrowUpY    168
+#define arrowDownX   41
+#define arrowDownY  239
 #define arrowLeftX    5
-#define arrowLeftY  213
-#define arrowRightX  91
-#define arrowRightY 213
+#define arrowLeftY  203
+#define arrowRightX  77
+#define arrowRightY 203
 
 
 
