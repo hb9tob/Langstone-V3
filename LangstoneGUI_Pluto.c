@@ -207,16 +207,16 @@ int CTCSSTone[NUMCTCSS] = {0,670,693,719,744,770,797,825,854,885,915,948,974,100
 #define diallockY 15
 
 // Arrow buttons (35x35) arranged as a d-pad on the left side, just below RIT button 2 (y=165)
-// Total height: 3*35 + 2*1 = 107px  =>  y=168 to y=274, clears SQL value display at y=275
+// Total height: 3*35 + 2*1 = 107px  =>  y=163 to y=269, clears SQL value display at y=275
 #define arrowButtonSize 35
 #define arrowUpX     41
-#define arrowUpY    168
+#define arrowUpY    163
 #define arrowDownX   41
-#define arrowDownY  239
+#define arrowDownY  234
 #define arrowLeftX    5
-#define arrowLeftY  203
+#define arrowLeftY  198
 #define arrowRightX  77
-#define arrowRightY 203
+#define arrowRightY 198
 
 
 
@@ -1881,12 +1881,16 @@ if(arrowButtonTouched(arrowDownX, arrowDownY))
 if(arrowButtonTouched(arrowLeftX, arrowLeftY))
   {
     processMouse(1+128);
+    twoButTimer=0;    // prevent accidental dial lock when tapping left then right
+    lastBut=0;
     return;
   }
 
 if(arrowButtonTouched(arrowRightX, arrowRightY))
   {
     processMouse(2+128);
+    twoButTimer=0;    // prevent accidental dial lock when tapping right then left
+    lastBut=0;
     return;
   }
 
