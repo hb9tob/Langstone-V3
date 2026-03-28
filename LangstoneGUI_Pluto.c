@@ -209,14 +209,14 @@ int CTCSSTone[NUMCTCSS] = {0,670,693,719,744,770,797,825,854,885,915,948,974,100
 // Arrow buttons (35x35) arranged as a d-pad on the left side, just below RIT button 2 (y=165)
 // Total height: 3*35 + 2*1 = 107px  =>  y=163 to y=269, clears SQL value display at y=275
 #define arrowButtonSize 35
-#define arrowUpX     41
-#define arrowUpY    163
-#define arrowDownX   41
-#define arrowDownY  234
-#define arrowLeftX    5
-#define arrowLeftY  198
-#define arrowRightX  77
-#define arrowRightY 198
+#define arrowUpX     46
+#define arrowUpY    158
+#define arrowDownX   46
+#define arrowDownY  229
+#define arrowLeftX   10
+#define arrowLeftY  193
+#define arrowRightX  82
+#define arrowRightY 193
 
 
 
