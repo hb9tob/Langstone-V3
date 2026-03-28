@@ -107,7 +107,36 @@ chmod +x installHack.sh
 
 The initial build can take some time, however it does not need any user input, so go and make a cup of coffee and keep an eye on the touchscreen.  When the build is finished the Pi will reboot and should start-up with the Langstone Transceiver. Occasionally a second reboot may be required. If after this it still does not appear to be working then see the Langstone wiki for some things to look at.
 
-# Updating the Software. 
+# Modifications HB9TOB (fork)
+
+This fork adds the following changes to the original Langstone-V3 project:
+
+## Touchscreen D-Pad (LangstoneGUI_Pluto.c)
+
+Four arrow buttons (35×35px) arranged as a directional pad have been added to the left side of the screen, allowing full control without a mouse.
+
+```
+     [ ^ ]
+[ < ]     [ > ]
+     [ v ]
+```
+
+- **Up / Down** — equivalent to the mouse scroll wheel (frequency tuning, volume, squelch, RIT, settings)
+- **Left / Right** — equivalent to mouse left/right buttons (select tuning digit)
+- The dial lock mechanism is not triggered when tapping Left then Right on the touchscreen
+
+## Install scripts
+
+`installPluto.sh` and `installHack.sh` now clone from this fork (`hb9tob/Langstone-V3`) instead of the original repository.
+
+To update an existing installation from this fork:
+```bash
+cd ~/Langstone && wget -O LangstoneGUI_Pluto.c https://raw.githubusercontent.com/hb9tob/Langstone-V3/main/LangstoneGUI_Pluto.c && ./build
+```
+
+---
+
+# Updating the Software.
 
 If you have a running Langstone-V3 you can update by doing the following. 
 
