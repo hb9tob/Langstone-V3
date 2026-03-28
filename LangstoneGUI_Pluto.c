@@ -109,6 +109,8 @@ void setDialLock(int d);
 void setBeacon(int b);
 
 FILE *openFile( char *fn, char *mode );
+void displayArrowButtons(void);
+int arrowButtonTouched(int bx, int by);
 
 int firstpass=1;
 double freq;
@@ -203,6 +205,17 @@ int CTCSSTone[NUMCTCSS] = {0,670,693,719,744,770,797,825,854,885,915,948,974,100
 #define errorY 240
 #define diallockX 316
 #define diallockY 15
+
+// Arrow buttons (42x42) arranged as a d-pad on the right side, between RIT and Vol buttons
+#define arrowButtonSize 42
+#define arrowUpX    705
+#define arrowUpY    168
+#define arrowDownX  705
+#define arrowDownY  254
+#define arrowLeftX  660
+#define arrowLeftY  211
+#define arrowRightX 750
+#define arrowRightY 211
 
 
 
@@ -1519,8 +1532,10 @@ void initGUI()
   displayMenu();
   setBand(band);
   
-//Squelch button now visible in all modes. 
+//Squelch button now visible in all modes.
     sqlButton(1);
+
+    displayArrowButtons();
 
     clearWaterfall();
 
@@ -1844,7 +1859,35 @@ void setFreqInc()
 
 
 void processTouch()
-{ 
+{
+
+// Arrow Buttons (d-pad) - equivalent to mouse wheel and left/right buttons
+
+if(arrowButtonTouched(arrowUpX, arrowUpY))
+  {
+    mouseScroll=1;
+    processMouse(128);
+    return;
+  }
+
+if(arrowButtonTouched(arrowDownX, arrowDownY))
+  {
+    mouseScroll=-1;
+    processMouse(128);
+    return;
+  }
+
+if(arrowButtonTouched(arrowLeftX, arrowLeftY))
+  {
+    processMouse(1+128);
+    return;
+  }
+
+if(arrowButtonTouched(arrowRightX, arrowRightY))
+  {
+    processMouse(2+128);
+    return;
+  }
 
 
 // Volume Button   
@@ -2201,6 +2244,42 @@ if(popupSel==BEACON)
 int buttonTouched(int bx,int by)
 {
   return ((touchX > bx) & (touchX < bx+buttonWidth) & (touchY > by) & (touchY < by+buttonHeight));
+}
+
+int arrowButtonTouched(int bx, int by)
+{
+  return ((touchX > bx) & (touchX < bx+arrowButtonSize) & (touchY > by) & (touchY < by+arrowButtonSize));
+}
+
+void displayArrowButton(char*s, int bx, int by)
+{
+  int x, y;
+  for(x=0; x<=arrowButtonSize; x++)
+  {
+    setPixel(bx+x, by, foreColourR, foreColourG, foreColourB);
+    setPixel(bx+x, by+arrowButtonSize, foreColourR, foreColourG, foreColourB);
+  }
+  for(y=0; y<=arrowButtonSize; y++)
+  {
+    setPixel(bx, by+y, foreColourR, foreColourG, foreColourB);
+    setPixel(bx+arrowButtonSize, by+y, foreColourR, foreColourG, foreColourB);
+  }
+  for(x=1; x<arrowButtonSize; x++)
+    for(y=1; y<arrowButtonSize; y++)
+      setPixel(bx+x, by+y, backColourR, backColourG, backColourB);
+  int sx = (arrowButtonSize - (int)strlen(s)*8*2) / 2;
+  gotoXY(bx+sx, by+12);
+  textSize=2;
+  displayStr(s);
+}
+
+void displayArrowButtons(void)
+{
+  setForeColour(0, 255, 0);
+  displayArrowButton("^", arrowUpX, arrowUpY);
+  displayArrowButton("v", arrowDownX, arrowDownY);
+  displayArrowButton("<", arrowLeftX, arrowLeftY);
+  displayArrowButton(">", arrowRightX, arrowRightY);
 }
 
 void setBand(int b)
