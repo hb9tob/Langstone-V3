@@ -67,6 +67,37 @@ cd ~
 
 
 
+echo "#################################"
+echo "##       Install gr-anr        ##"
+echo "##   (spectral noise reduction) ##"
+echo "#################################"
+
+cd ~
+git clone https://github.com/hb9tob/gr-anr.git
+cd gr-anr
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+sudo ldconfig
+cd ~
+
+
+echo "#################################"
+echo "##    Optimise GNU Radio       ##"
+echo "#################################"
+
+# Generate optimised VOLK kernel map for this CPU (SIMD acceleration)
+# This significantly improves DSP performance on the Pi
+volk_profile
+
+# Set CPU governor to performance mode for consistent real-time DSP
+sudo apt-get -y install cpufrequtils
+echo 'GOVERNOR="performance"' | sudo tee /etc/default/cpufrequtils
+sudo systemctl enable cpufrequtils 2>/dev/null || true
+
+
 echo "####################################"
 echo "##     Installing Langstone-V3    ##"
 echo "####################################"
