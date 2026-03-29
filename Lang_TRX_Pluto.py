@@ -68,7 +68,7 @@ class Lang_TRX_Pluto(gr.top_block):
         self.comp_agc_decay   = 0.033
         self.comp_agc_ref     = 0.90
         self.comp_agc_max     = 100.0
-        self.comp_lpf_cutoff  = 3500
+        self.comp_lpf_cutoff  = 3000
 
         # NB1 spectral noise reduction parameters
         self.nb1_algorithm  = 0
@@ -435,10 +435,20 @@ class Lang_TRX_Pluto(gr.top_block):
         self.blocks_multiply_const_vxx_1.set_k(((self.AFGain/100.0) *  (not self.Rx_Mute)))
 
     def _comp_connect(self):
+        # IIR HPF 1er ordre à ~300Hz: coupe les basses en dessous de la zone voix
+        # Coefficients calculés pour fc=300Hz à fs=48kHz (α=exp(-2π*300/48000)=0.9615)
+        self.hpf_comp = filter.iir_filter_ffd(
+            [0.9808, -0.9808], [1.0, -0.9615], True)
+        # Pré-accentuation: FIR [1, -0.8] → boost doux +6dB à 3kHz vs 300Hz
+        # Renforce la zone d'intelligibilité vocale SSB (1-3kHz)
+        self.preemp_comp = filter.iir_filter_ffd(
+            [1.0, -0.80], [1.0], True)
+        # FIR LPF: limite la bande passante SSB
         self.lpf_comp = filter.fir_filter_fff(
             1,
             firdes.low_pass(0.9, 48000, self.comp_lpf_cutoff, 500,
                             window.WIN_HAMMING, 6.76))
+        # AGC2: compresse un signal déjà filtré et pré-accentué
         self.agc2_comp = analog.agc2_ff(
             self.comp_agc_attack,
             self.comp_agc_decay,
@@ -447,16 +457,22 @@ class Lang_TRX_Pluto(gr.top_block):
             self.comp_agc_max)
         self.disconnect((self.blocks_multiply_const_vxx_0, 0),
                         (self.blocks_add_const_vxx_0_0, 0))
-        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.lpf_comp, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.hpf_comp, 0))
+        self.connect((self.hpf_comp, 0), (self.preemp_comp, 0))
+        self.connect((self.preemp_comp, 0), (self.lpf_comp, 0))
         self.connect((self.lpf_comp, 0), (self.agc2_comp, 0))
         self.connect((self.agc2_comp, 0), (self.blocks_add_const_vxx_0_0, 0))
 
     def _comp_disconnect(self):
-        self.disconnect((self.blocks_multiply_const_vxx_0, 0), (self.lpf_comp, 0))
+        self.disconnect((self.blocks_multiply_const_vxx_0, 0), (self.hpf_comp, 0))
+        self.disconnect((self.hpf_comp, 0), (self.preemp_comp, 0))
+        self.disconnect((self.preemp_comp, 0), (self.lpf_comp, 0))
         self.disconnect((self.lpf_comp, 0), (self.agc2_comp, 0))
         self.disconnect((self.agc2_comp, 0), (self.blocks_add_const_vxx_0_0, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0),
                      (self.blocks_add_const_vxx_0_0, 0))
+        del self.hpf_comp
+        del self.preemp_comp
         del self.lpf_comp
         del self.agc2_comp
 

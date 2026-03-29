@@ -308,7 +308,7 @@ int compAgcAttack=41;     // ×1000 → 0.041
 int compAgcDecay=33;      // ×1000 → 0.033
 int compAgcRef=90;        // ×100  → 0.90
 int compAgcMax=100;       // integer → 100.0
-int compLpfCutoff=3500;   // Hz
+int compLpfCutoff=3000;   // Hz
 int compSettingNo=0;
 #define numCOMPSettings 5
 char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= "};
