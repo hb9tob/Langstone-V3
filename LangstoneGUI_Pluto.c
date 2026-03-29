@@ -60,8 +60,12 @@ void setKey(int k);
 void displayMenu(void);
 void showSettingsMenu(void);
 void showExtraMenu(void);
+void showNB1SettingsMenu(void);
+void displayNB1Setting(int se);
+void sendNB1Params(void);
 void displaySetting(int se);
 void changeSetting(void);
+void changeNB1Setting(void);
 void processGPIO(void);
 void initGPIO(void);
 int readConfig(void);
@@ -159,7 +163,7 @@ int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
 
-enum {FREQ,SETTINGS,VOLUME,SQUELCH,RIT,EXTRA};
+enum {FREQ,SETTINGS,VOLUME,SQUELCH,RIT,EXTRA,NB1_SETTINGS};
 int inputMode=FREQ;
 
 #define NUMCTCSS 52
@@ -285,6 +289,15 @@ int enableGPIOPTT=0;    // GPIO 17 PTT enabled (0=disabled, 1=enabled)
 int enableCWKey=0;      // CW key enabled (0=disabled, 1=enabled)
 int enablePlutoTx=0;    // Pluto TX output enabled (0=disabled, 1=enabled)
 int nb1Active=0;        // NB1 spectral noise reduction active
+int nb1Algorithm=0;     // 0=Wiener 1=Over-subtract 2=MMSE
+int nb1FftSize=256;     // 64/128/256/512/1024
+int nb1Overlap=4;       // 2/4/8/16
+int nb1Alpha=98;        // ×100 → 0.98
+int nb1Beta=20;         // ×10  → 2.0
+int nb1GainFloor=10;    // ×1000 → 0.010
+int nb1SettingNo=0;
+#define numNB1Settings 6
+char * nb1SettingText[numNB1Settings]={"Algorithm= ","FFT Size= ","Overlap= ","Alpha= ","Beta= ","Gain Floor= "};
 
 int tuneDigit=8;
 #define maxTuneDigit 11
@@ -1741,6 +1754,11 @@ void processMouse(int mbut)
         changeSetting();
         return;
       }
+      if(inputMode==NB1_SETTINGS)
+      {
+        changeNB1Setting();
+        return;
+      }
       if(inputMode==VOLUME)
       {
         volume=volume+mouseScroll;
@@ -1993,11 +2011,17 @@ if(buttonTouched(funcButtonsX,funcButtonsY))    //Button 1 = BAND or MENU
       displayPopupBand();
       return;
     }
+    else if(inputMode==NB1_SETTINGS)
+    {
+      writeConfig();
+      setInputMode(EXTRA);
+      return;
+    }
     else
     {
       setInputMode(FREQ);
       clearPopUp();
-      return; 
+      return;
     }
       
         
@@ -2061,6 +2085,13 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*2,funcButtonsY))  // Button 3 = EXTRA
       displaySetting(settingNo);
       return;
       }
+      else if(inputMode==NB1_SETTINGS)
+      {
+      nb1SettingNo=nb1SettingNo+1;
+      if(nb1SettingNo==numNB1Settings) nb1SettingNo=0;
+      displayNB1Setting(nb1SettingNo);
+      return;
+      }
       else
       {
       setInputMode(FREQ);
@@ -2079,6 +2110,13 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*3,funcButtonsY))    // Button4 =SET o
       settingNo=settingNo-1;
       if(settingNo<0) settingNo=numSettings-1;
       displaySetting(settingNo);
+      return;
+      }
+    else if(inputMode==NB1_SETTINGS)
+      {
+      nb1SettingNo=nb1SettingNo-1;
+      if(nb1SettingNo<0) nb1SettingNo=numNB1Settings-1;
+      displayNB1Setting(nb1SettingNo);
       return;
       }
     else
@@ -2142,8 +2180,13 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*5,funcButtonsY))    //Button 6 = BEAC
       }
     } 
          
-if(buttonTouched(funcButtonsX+buttonSpaceX*6,funcButtonsY))   //Button 7 = PTT  or OFF
+if(buttonTouched(funcButtonsX+buttonSpaceX*6,funcButtonsY))   //Button 7 = PTT or SET(EXTRA) or OFF
     {
+    if(inputMode==EXTRA)
+      {
+      setInputMode(NB1_SETTINGS);
+      return;
+      }
     if(inputMode==FREQ)
       {
       if(ptts==0)
@@ -2496,6 +2539,12 @@ if(inputMode==EXTRA)
   {
     clearPopUp();
     showExtraMenu();
+  }
+if(inputMode==NB1_SETTINGS)
+  {
+    clearPopUp();
+    showNB1SettingsMenu();
+    displayNB1Setting(nb1SettingNo);
   }
 if(inputMode==VOLUME)
   {
@@ -3206,6 +3255,63 @@ void setBandBits(int b)
 }
 
 
+void changeNB1Setting(void)
+{
+  if(nb1SettingNo==0)        // Algorithm
+    {
+    if(mouseScroll > 0) nb1Algorithm++;
+    if(mouseScroll < 0) nb1Algorithm--;
+    mouseScroll=0;
+    if(nb1Algorithm < 0) nb1Algorithm=0;
+    if(nb1Algorithm > 2) nb1Algorithm=2;
+    sendNB1Params();
+    displayNB1Setting(nb1SettingNo);
+    }
+  if(nb1SettingNo==1)        // FFT Size (powers of 2: 64→1024)
+    {
+    if(mouseScroll > 0 && nb1FftSize < 1024) nb1FftSize *= 2;
+    if(mouseScroll < 0 && nb1FftSize >   64) nb1FftSize /= 2;
+    mouseScroll=0;
+    sendNB1Params();
+    displayNB1Setting(nb1SettingNo);
+    }
+  if(nb1SettingNo==2)        // Overlap (powers of 2: 2→16)
+    {
+    if(mouseScroll > 0 && nb1Overlap < 16) nb1Overlap *= 2;
+    if(mouseScroll < 0 && nb1Overlap >  2) nb1Overlap /= 2;
+    mouseScroll=0;
+    sendNB1Params();
+    displayNB1Setting(nb1SettingNo);
+    }
+  if(nb1SettingNo==3)        // Alpha (×100: 80→99)
+    {
+    nb1Alpha += mouseScroll;
+    mouseScroll=0;
+    if(nb1Alpha < 80) nb1Alpha=80;
+    if(nb1Alpha > 99) nb1Alpha=99;
+    sendNB1Params();
+    displayNB1Setting(nb1SettingNo);
+    }
+  if(nb1SettingNo==4)        // Beta (×10: 5→50)
+    {
+    nb1Beta += mouseScroll;
+    mouseScroll=0;
+    if(nb1Beta <  5) nb1Beta= 5;
+    if(nb1Beta > 50) nb1Beta=50;
+    sendNB1Params();
+    displayNB1Setting(nb1SettingNo);
+    }
+  if(nb1SettingNo==5)        // Gain Floor (×1000: 1→100)
+    {
+    nb1GainFloor += mouseScroll;
+    mouseScroll=0;
+    if(nb1GainFloor <   1) nb1GainFloor=  1;
+    if(nb1GainFloor > 100) nb1GainFloor=100;
+    sendNB1Params();
+    displayNB1Setting(nb1SettingNo);
+    }
+}
+
 void changeSetting(void)
 {
   if(settingNo==SSB_MIC)        //SSB Mic Gain
@@ -3645,9 +3751,64 @@ void showExtraMenu(void)
     displayButton("    ");
     displayButton("    ");
     displayButton("    ");
+    setForeColour(255,165,0);
+    displayButton("SET");
+  }
+
+
+void showNB1SettingsMenu(void)
+  {
+    gotoXY(funcButtonsX,funcButtonsY);
+    setForeColour(0,255,0);
+    displayButton("MENU");
+    setForeColour(0,0,255);
+    displayButton("    ");
+    displayButton("NEXT");
+    displayButton("PREV");
+    displayButton("    ");
+    displayButton("    ");
     displayButton("    ");
   }
 
+void displayNB1Setting(int se)
+  {
+    char valStr[30];
+    gotoXY(0,settingY);
+    textSize=2;
+    setForeColour(255,165,0);
+    displayStr("                                                ");
+    gotoXY(0,settingY+8);
+    displayStr("                                                ");
+    gotoXY(settingX,settingY);
+    displayStr(nb1SettingText[se]);
+    if(se==0)
+      {
+      if(nb1Algorithm==0) displayStr("Wiener");
+      else if(nb1Algorithm==1) displayStr("Over-sub");
+      else displayStr("MMSE");
+      }
+    if(se==1)
+      { sprintf(valStr,"%d",nb1FftSize); displayStr(valStr); }
+    if(se==2)
+      { sprintf(valStr,"%d",nb1Overlap); displayStr(valStr); }
+    if(se==3)
+      { sprintf(valStr,"0.%02d",nb1Alpha); displayStr(valStr); }
+    if(se==4)
+      { sprintf(valStr,"%d.%d",nb1Beta/10,nb1Beta%10); displayStr(valStr); }
+    if(se==5)
+      { sprintf(valStr,"0.%03d",nb1GainFloor); displayStr(valStr); }
+  }
+
+void sendNB1Params(void)
+  {
+    char cmd[20];
+    sprintf(cmd,"e%d",nb1Algorithm);  sendFifo(cmd);
+    sprintf(cmd,"j%d",nb1FftSize);    sendFifo(cmd);
+    sprintf(cmd,"p%d",nb1Overlap);    sendFifo(cmd);
+    sprintf(cmd,"x%d",nb1Alpha);      sendFifo(cmd);
+    sprintf(cmd,"y%d",nb1Beta);       sendFifo(cmd);
+    sprintf(cmd,"z%d",nb1GainFloor);  sendFifo(cmd);
+  }
 
 void displaySetting(int se)
 {
@@ -4008,6 +4169,12 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     if(strstr(variable,"enableGPIOPTT")) sscanf(value,"%d",&enableGPIOPTT);
     if(strstr(variable,"enableCWKey")) sscanf(value,"%d",&enableCWKey);
     if(strstr(variable,"enablePlutoTx")) sscanf(value,"%d",&enablePlutoTx);
+    if(strstr(variable,"nb1Algorithm")) sscanf(value,"%d",&nb1Algorithm);
+    if(strstr(variable,"nb1FftSize"))   sscanf(value,"%d",&nb1FftSize);
+    if(strstr(variable,"nb1Overlap"))   sscanf(value,"%d",&nb1Overlap);
+    if(strstr(variable,"nb1Alpha"))     sscanf(value,"%d",&nb1Alpha);
+    if(strstr(variable,"nb1Beta"))      sscanf(value,"%d",&nb1Beta);
+    if(strstr(variable,"nb1GainFloor")) sscanf(value,"%d",&nb1GainFloor);
     if(mode>nummode-1) mode=0;
             
   }
@@ -4087,6 +4254,12 @@ fprintf(conffile,"RotateScreen %d\n",screenrotate);
 fprintf(conffile,"enableGPIOPTT %d\n",enableGPIOPTT);
 fprintf(conffile,"enableCWKey %d\n",enableCWKey);
 fprintf(conffile,"enablePlutoTx %d\n",enablePlutoTx);
+fprintf(conffile,"nb1Algorithm %d\n",nb1Algorithm);
+fprintf(conffile,"nb1FftSize %d\n",nb1FftSize);
+fprintf(conffile,"nb1Overlap %d\n",nb1Overlap);
+fprintf(conffile,"nb1Alpha %d\n",nb1Alpha);
+fprintf(conffile,"nb1Beta %d\n",nb1Beta);
+fprintf(conffile,"nb1GainFloor %d\n",nb1GainFloor);
 
 fclose(conffile);
 return 0;

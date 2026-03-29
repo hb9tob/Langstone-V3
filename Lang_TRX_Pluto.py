@@ -63,6 +63,14 @@ class Lang_TRX_Pluto(gr.top_block):
         self.AMMIC = AMMIC = 5
         self.AFGain = AFGain = 100
 
+        # NB1 spectral noise reduction parameters
+        self.nb1_algorithm  = 0
+        self.nb1_fft_size   = 256
+        self.nb1_overlap    = 4
+        self.nb1_alpha      = 0.98
+        self.nb1_beta       = 2.0
+        self.nb1_gain_floor = 0.01
+
         ##################################################
         # Blocks
         ##################################################
@@ -419,41 +427,54 @@ class Lang_TRX_Pluto(gr.top_block):
         self.AFGain = AFGain
         self.blocks_multiply_const_vxx_1.set_k(((self.AFGain/100.0) *  (not self.Rx_Mute)))
 
+    def _nb1_connect(self):
+        self.rational_resampler_nb_down = filter.rational_resampler_fff(
+            interpolation=1, decimation=6, taps=[], fractional_bw=0)
+        self.spectral_nr_0 = anr.spectral_nr_ff(
+            fft_size=self.nb1_fft_size,
+            overlap=self.nb1_overlap,
+            algorithm=self.nb1_algorithm,
+            alpha=self.nb1_alpha,
+            beta=self.nb1_beta,
+            gain_floor=self.nb1_gain_floor)
+        self.rational_resampler_nb_up = filter.rational_resampler_fff(
+            interpolation=6, decimation=1, taps=[], fractional_bw=0)
+        self.disconnect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
+        self.connect((self.low_pass_filter_0, 0), (self.rational_resampler_nb_down, 0))
+        self.connect((self.rational_resampler_nb_down, 0), (self.spectral_nr_0, 0))
+        self.connect((self.spectral_nr_0, 0), (self.rational_resampler_nb_up, 0))
+        self.connect((self.rational_resampler_nb_up, 0), (self.audio_sink_0, 0))
+
+    def _nb1_disconnect(self):
+        self.disconnect((self.low_pass_filter_0, 0), (self.rational_resampler_nb_down, 0))
+        self.disconnect((self.rational_resampler_nb_down, 0), (self.spectral_nr_0, 0))
+        self.disconnect((self.spectral_nr_0, 0), (self.rational_resampler_nb_up, 0))
+        self.disconnect((self.rational_resampler_nb_up, 0), (self.audio_sink_0, 0))
+        self.connect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
+        del self.rational_resampler_nb_down
+        del self.spectral_nr_0
+        del self.rational_resampler_nb_up
+
     def set_NB1(self, enable):
         self.lock()
         if enable:
-            self.rational_resampler_nb_down = filter.rational_resampler_fff(
-                interpolation=1,
-                decimation=6,
-                taps=[],
-                fractional_bw=0)
-            self.spectral_nr_0 = anr.spectral_nr_ff(
-                fft_size=256,
-                overlap=4,
-                algorithm=0,
-                alpha=0.98,
-                beta=2.0,
-                gain_floor=0.01)
-            self.rational_resampler_nb_up = filter.rational_resampler_fff(
-                interpolation=6,
-                decimation=1,
-                taps=[],
-                fractional_bw=0)
-            self.disconnect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
-            self.connect((self.low_pass_filter_0, 0), (self.rational_resampler_nb_down, 0))
-            self.connect((self.rational_resampler_nb_down, 0), (self.spectral_nr_0, 0))
-            self.connect((self.spectral_nr_0, 0), (self.rational_resampler_nb_up, 0))
-            self.connect((self.rational_resampler_nb_up, 0), (self.audio_sink_0, 0))
+            self._nb1_connect()
         else:
-            self.disconnect((self.low_pass_filter_0, 0), (self.rational_resampler_nb_down, 0))
-            self.disconnect((self.rational_resampler_nb_down, 0), (self.spectral_nr_0, 0))
-            self.disconnect((self.spectral_nr_0, 0), (self.rational_resampler_nb_up, 0))
-            self.disconnect((self.rational_resampler_nb_up, 0), (self.audio_sink_0, 0))
-            self.connect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
-            del self.rational_resampler_nb_down
-            del self.spectral_nr_0
-            del self.rational_resampler_nb_up
+            self._nb1_disconnect()
         self.unlock()
+
+    def set_nb1_param(self, param_id, raw_value):
+        if   param_id == 0: self.nb1_algorithm  = raw_value
+        elif param_id == 1: self.nb1_fft_size   = raw_value
+        elif param_id == 2: self.nb1_overlap     = raw_value
+        elif param_id == 3: self.nb1_alpha       = raw_value / 100.0
+        elif param_id == 4: self.nb1_beta        = raw_value / 10.0
+        elif param_id == 5: self.nb1_gain_floor  = raw_value / 1000.0
+        if hasattr(self, 'spectral_nr_0'):
+            self.lock()
+            self._nb1_disconnect()
+            self._nb1_connect()
+            self.unlock()
 
 def docommands(tb):
   try:
@@ -543,6 +564,18 @@ def docommands(tb):
            if line[0]=='N':
               value=int(line[1:])
               tb.set_NB1(value)
+           if line[0]=='e':
+              tb.set_nb1_param(0, int(line[1:]))
+           if line[0]=='j':
+              tb.set_nb1_param(1, int(line[1:]))
+           if line[0]=='p':
+              tb.set_nb1_param(2, int(line[1:]))
+           if line[0]=='x':
+              tb.set_nb1_param(3, int(line[1:]))
+           if line[0]=='y':
+              tb.set_nb1_param(4, int(line[1:]))
+           if line[0]=='z':
+              tb.set_nb1_param(5, int(line[1:]))
                                                                                 
        except:
          break
