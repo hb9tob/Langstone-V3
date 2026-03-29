@@ -129,7 +129,7 @@ int bandBitsRx[numband]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21
 int bandBitsTx[numband]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
 int bandSquelch[numband][nummode]={0};
 int bandFFTRef[numband]={-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10};
-int bandTxAtt[numband]={0};
+int bandTxAtt[numband]={-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89};
 int bandRxGain[numband]={100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100};              //100 is automatic gain
 int bandDuplex[numband]={0};
 int bandCTCSS[numband]={0};
@@ -150,10 +150,10 @@ int lastmode=0;
 char * modename[nummode]={"USB","LSB","CW ","CWN","FM ","AM "};
 enum {USB,LSB,CW,CWN,FM,AM};
 
-#define numSettings 23
+#define numSettings 26
 
-char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= "};
-enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24};
+char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= "};
+enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX};
 int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
@@ -278,7 +278,11 @@ int FMMic=50;
 int AMMic=20;
 #define maxAMMic 100
 
-int TxAtt=0;
+int TxAtt=-89;
+
+int enableGPIOPTT=0;    // GPIO 17 PTT enabled (0=disabled, 1=enabled)
+int enableCWKey=0;      // CW key enabled (0=disabled, 1=enabled)
+int enablePlutoTx=0;    // Pluto TX output enabled (0=disabled, 1=enabled)
 
 int tuneDigit=8;
 #define maxTuneDigit 11
@@ -1409,52 +1413,58 @@ int k1=1;
   k1=lgGpioRead(gpiohandle,keyPin);
 
   
-    if(p1==0)             //if the hardware PTT has been pressed
+    if(enableGPIOPTT)
         {
-          if(ptt==0)
+        if(p1==0)             //if the hardware PTT has been pressed
             {
-              ptt=1;
-              if(ptts==1) setPtts(0);                       //turn off the touchscreen PTT.
-              setTx(ptt|ptts);
+              if(ptt==0)
+                {
+                  ptt=1;
+                  if(ptts==1) setPtts(0);                       //turn off the touchscreen PTT.
+                  setTx(ptt|ptts);
+                }
             }
-        }
-     else
-        {
-          if(ptt==1)
+         else
             {
-              ptt=0;
-              setTx(ptt|ptts);
+              if(ptt==1)
+                {
+                  ptt=0;
+                  setTx(ptt|ptts);
+                }
             }
         }
 
-      if(k1!=lastKey)
-    {    
-    setKey(!k1);
-    lastKey=k1;
-    } 
-
-    if((mode==CW) ||(mode==CWN))
-      {
-        if(k1==0)          //key down
-          {
-            if((ptt|ptts)==0)   //not transmitting
-              { 
-                setTx(1);    
-              }
-            breakInTimer=breakInTime;
-          }
-        else
-          {
-            if((breakInTimer>0) & ((ptt|ptts)==0))
+    if(enableCWKey)
+        {
+        if(k1!=lastKey)
             {
-            breakInTimer--;
-            if(breakInTimer==0)
+            setKey(!k1);
+            lastKey=k1;
+            }
+
+        if((mode==CW) ||(mode==CWN))
+          {
+            if(k1==0)          //key down
               {
-              setTx(0);
+                if((ptt|ptts)==0)   //not transmitting
+                  {
+                    setTx(1);
+                  }
+                breakInTimer=breakInTime;
               }
-            }
-          }
-       }
+            else
+              {
+                if((breakInTimer>0) & ((ptt|ptts)==0))
+                {
+                breakInTimer--;
+                if(breakInTimer==0)
+                  {
+                  setTx(0);
+                  }
+                }
+              }
+           }
+        }
      
 }
 
@@ -2711,7 +2721,7 @@ void setTx(int pt)
         displayFreq(freq+bandRepShift[band]);
         displayMenu();
         }
-      PlutoTxEnable(1);
+      if(enablePlutoTx) PlutoTxEnable(1);
       if (moni==0) setMute(1);                        //mute the receiver
       if(satMode()==0)
       {
@@ -3497,9 +3507,33 @@ if(settingNo==BAND_BITS_TX)        // Band Bits Tx
       {
       if(mouseScroll > 0)   bands24= 1;
       if(mouseScroll < 0)   bands24= 0;
-      mouseScroll=0;  
-      displaySetting(settingNo);  
-      } 
+      mouseScroll=0;
+      displaySetting(settingNo);
+      }
+
+  if(settingNo==ENABLE_GPIO_PTT)        // GPIO 17 PTT enable
+      {
+      if(mouseScroll > 0)   enableGPIOPTT= 1;
+      if(mouseScroll < 0)   enableGPIOPTT= 0;
+      mouseScroll=0;
+      displaySetting(settingNo);
+      }
+
+  if(settingNo==ENABLE_CW_KEY)        // CW key enable
+      {
+      if(mouseScroll > 0)   enableCWKey= 1;
+      if(mouseScroll < 0)   enableCWKey= 0;
+      mouseScroll=0;
+      displaySetting(settingNo);
+      }
+
+  if(settingNo==ENABLE_PLUTO_TX)        // Pluto TX output enable
+      {
+      if(mouseScroll > 0)   enablePlutoTx= 1;
+      if(mouseScroll < 0)   enablePlutoTx= 0;
+      mouseScroll=0;
+      displaySetting(settingNo);
+      }
       
   if(settingNo==ROTATE)        // Rotate Screen
       {
@@ -3807,6 +3841,21 @@ if(se==BANDS24)
         displayStr("Yes");
     }
   }
+
+if(se==ENABLE_GPIO_PTT)
+  {
+    displayStr(enableGPIOPTT ? "Enabled" : "Disabled");
+  }
+
+if(se==ENABLE_CW_KEY)
+  {
+    displayStr(enableCWKey ? "Enabled" : "Disabled");
+  }
+
+if(se==ENABLE_PLUTO_TX)
+  {
+    displayStr(enablePlutoTx ? "Enabled" : "Disabled");
+  }
     
  if(se==ROTATE)
   {
@@ -3923,6 +3972,9 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     if(strstr(variable,"bandBitsToPluto")) sscanf(value,"%d",&bandBitsToPluto);
     if(strstr(variable,"bands24")) sscanf(value,"%d",&bands24);
     if(strstr(variable,"RotateScreen")) sscanf(value,"%d",&screenrotate);
+    if(strstr(variable,"enableGPIOPTT")) sscanf(value,"%d",&enableGPIOPTT);
+    if(strstr(variable,"enableCWKey")) sscanf(value,"%d",&enableCWKey);
+    if(strstr(variable,"enablePlutoTx")) sscanf(value,"%d",&enablePlutoTx);
     if(mode>nummode-1) mode=0;
             
   }
@@ -3999,6 +4051,9 @@ fprintf(conffile,"breakInTime %d\n",breakInTime);
 fprintf(conffile,"bandBitsToPluto %d\n",bandBitsToPluto);
 fprintf(conffile,"bands24 %d\n",bands24);
 fprintf(conffile,"RotateScreen %d\n",screenrotate);
+fprintf(conffile,"enableGPIOPTT %d\n",enableGPIOPTT);
+fprintf(conffile,"enableCWKey %d\n",enableCWKey);
+fprintf(conffile,"enablePlutoTx %d\n",enablePlutoTx);
 
 fclose(conffile);
 return 0;
