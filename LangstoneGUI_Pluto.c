@@ -59,6 +59,7 @@ int buttonTouched(int bx,int by);
 void setKey(int k);
 void displayMenu(void);
 void showSettingsMenu(void);
+void showExtraMenu(void);
 void displaySetting(int se);
 void changeSetting(void);
 void processGPIO(void);
@@ -158,7 +159,7 @@ int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
 
-enum {FREQ,SETTINGS,VOLUME,SQUELCH,RIT};
+enum {FREQ,SETTINGS,VOLUME,SQUELCH,RIT,EXTRA};
 int inputMode=FREQ;
 
 #define NUMCTCSS 52
@@ -1607,7 +1608,9 @@ gotoXY(funcButtonsX,funcButtonsY);
   }
   else
   {
-  displayButton("    ");
+  setForeColour(0,0,255);
+  displayButton("EXTRA");
+  setForeColour(0,255,0);
   }
 
   displayButton("SET");
@@ -2013,32 +2016,34 @@ if(buttonTouched(funcButtonsX+buttonSpaceX,funcButtonsY))    //Button 2 = MODE o
       }
     }
       
-if(buttonTouched(funcButtonsX+buttonSpaceX*2,funcButtonsY))  // Button 3 =Blank or DUP or 1750 or NEXT
+if(buttonTouched(funcButtonsX+buttonSpaceX*2,funcButtonsY))  // Button 3 = EXTRA or DUP or 1750 or NEXT
     {
      if(inputMode==FREQ)
       {
       if((mode==FM) && (bandRepShift[band]!=0))
-      {
-        if((ptt | ptts) && (bandDuplex[band]>0))
-        {  
-        send1750(); 
-        }
-        else
         {
-        if(bandDuplex[band]==0) 
+        if((ptt | ptts) && (bandDuplex[band]>0))
           {
-          bandDuplex[band]=1;
-          setMode(mode);
+          send1750();
           }
-         else 
+        else
           {
-          bandDuplex[band]=0;
-          setMode(mode);
+          if(bandDuplex[band]==0)
+            {
+            bandDuplex[band]=1;
+            setMode(mode);
+            }
+          else
+            {
+            bandDuplex[band]=0;
+            setMode(mode);
+            }
           }
-
         }
-       
-      }      
+      else
+        {
+        setInputMode(EXTRA);
+        }
       return;
       }
       else if(inputMode==SETTINGS)
@@ -2477,7 +2482,12 @@ if(inputMode==SETTINGS)
     clearPopUp();
     showSettingsMenu();
     mouseScroll=0;
-    displaySetting(settingNo); 
+    displaySetting(settingNo);
+  }
+if(inputMode==EXTRA)
+  {
+    clearPopUp();
+    showExtraMenu();
   }
 if(inputMode==VOLUME)
   {
@@ -3614,6 +3624,20 @@ void showSettingsMenu(void)
     displayButton1x12("SHUTDOWN");
   }
 
+
+void showExtraMenu(void)
+  {
+    gotoXY(funcButtonsX,funcButtonsY);
+    setForeColour(0,255,0);
+    displayButton("MENU");
+    setForeColour(0,0,255);
+    displayButton("    ");
+    displayButton("    ");
+    displayButton("    ");
+    displayButton("    ");
+    displayButton("    ");
+    displayButton("    ");
+  }
 
 
 void displaySetting(int se)
