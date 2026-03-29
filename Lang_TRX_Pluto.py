@@ -450,6 +450,9 @@ class Lang_TRX_Pluto(gr.top_block):
             self.disconnect((self.spectral_nr_0, 0), (self.rational_resampler_nb_up, 0))
             self.disconnect((self.rational_resampler_nb_up, 0), (self.audio_sink_0, 0))
             self.connect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
+            del self.rational_resampler_nb_down
+            del self.spectral_nr_0
+            del self.rational_resampler_nb_up
         self.unlock()
 
 def docommands(tb):
