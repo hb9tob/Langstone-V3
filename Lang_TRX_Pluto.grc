@@ -762,6 +762,25 @@ blocks:
     coordinate: [696, 1192]
     rotation: 0
     state: enabled
+- name: fir_filter_xxx_fft_aa
+  id: fir_filter_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Anti-aliasing LPF for FFT/waterfall decimation
+    decim: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    samp_delay: '0'
+    taps: firdes.low_pass(1, 48000, 22000, 2000, window.WIN_HAMMING, 6.76)
+    type: ccc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [280, 576.0]
+    rotation: 0
+    state: enabled
 - name: blocks_keep_one_in_n_0
   id: blocks_keep_one_in_n
   parameters:
@@ -1251,7 +1270,7 @@ connections:
 - [analog_sig_source_x_1_0, '0', blocks_add_xx_0_0, '0']
 - [audio_source_0, '0', blocks_multiply_const_vxx_0, '0']
 - [audio_source_0, '0', blocks_multiply_const_vxx_0_0, '0']
-- [band_pass_filter_0, '0', analog_nbfm_rx_0, '0']
+- [freq_xlating_fir_filter_xxx_0, '0', analog_nbfm_rx_0, '0']
 - [band_pass_filter_0, '0', blocks_complex_to_mag_0, '0']
 - [band_pass_filter_0, '0', blocks_complex_to_real_0, '0']
 - [band_pass_filter_0_0, '0', blocks_multiply_const_vxx_4, '0']
@@ -1284,7 +1303,8 @@ connections:
 - [blocks_vector_to_stream_0, '0', network_udp_sink_0, '0']
 - [blocks_vector_to_stream_0_0, '0', network_udp_sink_1, '0']
 - [freq_xlating_fir_filter_xxx_0, '0', band_pass_filter_0, '0']
-- [freq_xlating_fir_filter_xxx_0, '0', blocks_keep_one_in_n_0, '0']
+- [freq_xlating_fir_filter_xxx_0, '0', fir_filter_xxx_fft_aa, '0']
+- [fir_filter_xxx_fft_aa, '0', blocks_keep_one_in_n_0, '0']
 - [iio_pluto_source_0, '0', freq_xlating_fir_filter_xxx_0, '0']
 - [logpwrfft_x_0, '0', blocks_vector_to_stream_0, '0']
 - [logpwrfft_x_0_0, '0', blocks_vector_to_stream_0_0, '0']

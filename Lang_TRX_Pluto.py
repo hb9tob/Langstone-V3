@@ -131,6 +131,11 @@ class Lang_TRX_Pluto(gr.top_block):
         self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(((MicGain)*(int(Tx_Mode==0)) + (MicGain)*(int(Tx_Mode==1)) + (AMMIC/10.0)*(int(Tx_Mode==5)) ))
         self.blocks_keep_one_in_n_0_0 = blocks.keep_one_in_n(gr.sizeof_gr_complex*1, (2 ** FFT_SEL))
         self.blocks_keep_one_in_n_0 = blocks.keep_one_in_n(gr.sizeof_gr_complex*1, (2 ** FFT_SEL))
+        _fft_aa_cutoff = 48000 / (2 ** (FFT_SEL + 1)) * 0.9 if FFT_SEL > 0 else 22000
+        _fft_aa_trans = max(200, 48000 / (2 ** (FFT_SEL + 1)) * 0.1) if FFT_SEL > 0 else 2000
+        self.fir_filter_xxx_fft_aa = filter.fir_filter_ccc(
+            1,
+            firdes.low_pass(1, 48000, _fft_aa_cutoff, _fft_aa_trans, window.WIN_HAMMING, 6.76))
         self.blocks_float_to_complex_0_0 = blocks.float_to_complex(1)
         self.blocks_float_to_complex_0 = blocks.float_to_complex(1)
         self.blocks_complex_to_real_0_0 = blocks.complex_to_real(1)
@@ -211,7 +216,7 @@ class Lang_TRX_Pluto(gr.top_block):
         self.connect((self.analog_sig_source_x_1_0, 0), (self.blocks_add_xx_0_0, 0))
         self.connect((self.audio_source_0, 0), (self.blocks_multiply_const_vxx_0, 0))
         self.connect((self.audio_source_0, 0), (self.blocks_multiply_const_vxx_0_0, 0))
-        self.connect((self.band_pass_filter_0, 0), (self.analog_nbfm_rx_0, 0))
+        self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.analog_nbfm_rx_0, 0))
         self.connect((self.band_pass_filter_0, 0), (self.blocks_complex_to_mag_0, 0))
         self.connect((self.band_pass_filter_0, 0), (self.blocks_complex_to_real_0, 0))
         self.connect((self.band_pass_filter_0_0, 0), (self.blocks_multiply_const_vxx_4, 0))
@@ -244,7 +249,8 @@ class Lang_TRX_Pluto(gr.top_block):
         self.connect((self.blocks_vector_to_stream_0, 0), (self.network_udp_sink_0, 0))
         self.connect((self.blocks_vector_to_stream_0_0, 0), (self.network_udp_sink_1, 0))
         self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.band_pass_filter_0, 0))
-        self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.blocks_keep_one_in_n_0, 0))
+        self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.fir_filter_xxx_fft_aa, 0))
+        self.connect((self.fir_filter_xxx_fft_aa, 0), (self.blocks_keep_one_in_n_0, 0))
         self.connect((self.iio_pluto_source_0, 0), (self.freq_xlating_fir_filter_xxx_0, 0))
         self.connect((self.logpwrfft_x_0, 0), (self.blocks_vector_to_stream_0, 0))
         self.connect((self.logpwrfft_x_0_0, 0), (self.blocks_vector_to_stream_0_0, 0))
@@ -386,6 +392,9 @@ class Lang_TRX_Pluto(gr.top_block):
         self.blocks_keep_one_in_n_0_0.set_n((2 ** self.FFT_SEL))
         self.logpwrfft_x_0.set_sample_rate((48000/ (2 ** self.FFT_SEL)))
         self.logpwrfft_x_0_0.set_sample_rate((48000/ (2** self.FFT_SEL)))
+        _cutoff = 48000 / (2 ** (self.FFT_SEL + 1)) * 0.9 if self.FFT_SEL > 0 else 22000
+        _trans = max(200, 48000 / (2 ** (self.FFT_SEL + 1)) * 0.1) if self.FFT_SEL > 0 else 2000
+        self.fir_filter_xxx_fft_aa.set_taps(firdes.low_pass(1, 48000, _cutoff, _trans, window.WIN_HAMMING, 6.76))
 
     def get_CTCSS(self):
         return self.CTCSS
