@@ -62,6 +62,10 @@ void showSettingsMenu(void);
 void showExtraMenu(void);
 void showNB1SettingsMenu(void);
 void displayNB1Setting(int se);
+void showCOMPSettingsMenu(void);
+void displayCOMPSetting(int se);
+void sendCOMPParams(void);
+void changeCompSetting(void);
 void sendNB1Params(void);
 void displaySetting(int se);
 void changeSetting(void);
@@ -163,7 +167,7 @@ int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
 
-enum {FREQ,SETTINGS,VOLUME,SQUELCH,RIT,EXTRA,NB1_SETTINGS};
+enum {FREQ,SETTINGS,VOLUME,SQUELCH,RIT,EXTRA,NB1_SETTINGS,COMP_SETTINGS};
 int inputMode=FREQ;
 
 #define NUMCTCSS 52
@@ -298,6 +302,16 @@ int nb1GainFloor=10;    // ×1000 → 0.010
 int nb1SettingNo=0;
 #define numNB1Settings 6
 char * nb1SettingText[numNB1Settings]={"Algorithm= ","FFT Size= ","Overlap= ","Alpha= ","Beta= ","Gain Floor= "};
+
+int compActive=0;         // TX compressor active
+int compAgcAttack=41;     // ×1000 → 0.041
+int compAgcDecay=33;      // ×1000 → 0.033
+int compAgcRef=90;        // ×100  → 0.90
+int compAgcMax=100;       // integer → 100.0
+int compLpfCutoff=3500;   // Hz
+int compSettingNo=0;
+#define numCOMPSettings 5
+char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= "};
 
 int tuneDigit=8;
 #define maxTuneDigit 11
@@ -1759,6 +1773,11 @@ void processMouse(int mbut)
         changeNB1Setting();
         return;
       }
+      if(inputMode==COMP_SETTINGS)
+      {
+        changeCompSetting();
+        return;
+      }
       if(inputMode==VOLUME)
       {
         volume=volume+mouseScroll;
@@ -2017,6 +2036,12 @@ if(buttonTouched(funcButtonsX,funcButtonsY))    //Button 1 = BAND or MENU
       setInputMode(EXTRA);
       return;
     }
+    else if(inputMode==COMP_SETTINGS)
+    {
+      writeConfig();
+      setInputMode(EXTRA);
+      return;
+    }
     else
     {
       setInputMode(FREQ);
@@ -2078,6 +2103,13 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*2,funcButtonsY))  // Button 3 = EXTRA
         }
       return;
       }
+      else if(inputMode==EXTRA)
+      {
+      compActive=!compActive;
+      if(compActive) sendFifo("c1"); else sendFifo("c0");
+      showExtraMenu();
+      return;
+      }
       else if(inputMode==SETTINGS)
       {
       settingNo=settingNo+1;
@@ -2090,6 +2122,13 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*2,funcButtonsY))  // Button 3 = EXTRA
       nb1SettingNo=nb1SettingNo+1;
       if(nb1SettingNo==numNB1Settings) nb1SettingNo=0;
       displayNB1Setting(nb1SettingNo);
+      return;
+      }
+      else if(inputMode==COMP_SETTINGS)
+      {
+      compSettingNo=compSettingNo+1;
+      if(compSettingNo==numCOMPSettings) compSettingNo=0;
+      displayCOMPSetting(compSettingNo);
       return;
       }
       else
@@ -2119,13 +2158,20 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*3,funcButtonsY))    // Button4 =SET o
       displayNB1Setting(nb1SettingNo);
       return;
       }
+    else if(inputMode==COMP_SETTINGS)
+      {
+      compSettingNo=compSettingNo-1;
+      if(compSettingNo<0) compSettingNo=numCOMPSettings-1;
+      displayCOMPSetting(compSettingNo);
+      return;
+      }
     else
       {
       setInputMode(FREQ);
       return;
       }
     }
-       
+
 if(buttonTouched(funcButtonsX+buttonSpaceX*4,funcButtonsY))    //Button 5 =MONI (only allowed in Sat mode)  or Restart
     {
     if(inputMode==FREQ)
@@ -2138,15 +2184,25 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*4,funcButtonsY))    //Button 5 =MONI 
       } 
       else if (inputMode==SETTINGS)
       {
-        restartGNURadio();              
+        restartGNURadio();
+      }
+      else if (inputMode==NB1_SETTINGS)
+      {
+        setInputMode(COMP_SETTINGS);
+        return;
+      }
+      else if (inputMode==COMP_SETTINGS)
+      {
+        setInputMode(NB1_SETTINGS);
+        return;
       }
     else
       {
       setInputMode(FREQ);
       }
-      
- 
-    }      
+
+
+    }
 
 if(buttonTouched(funcButtonsX+buttonSpaceX*5,funcButtonsY))    //Button 6 = BEACON  or Exit to Portsdown
     {
@@ -2545,6 +2601,12 @@ if(inputMode==NB1_SETTINGS)
     clearPopUp();
     showNB1SettingsMenu();
     displayNB1Setting(nb1SettingNo);
+  }
+if(inputMode==COMP_SETTINGS)
+  {
+    clearPopUp();
+    showCOMPSettingsMenu();
+    displayCOMPSetting(compSettingNo);
   }
 if(inputMode==VOLUME)
   {
@@ -3746,8 +3808,9 @@ void showExtraMenu(void)
     displayButton("MENU");
     if(nb1Active) setForeColour(255,0,0); else setForeColour(0,0,255);
     displayButton("NB1");
+    if(compActive) setForeColour(255,0,0); else setForeColour(0,0,255);
+    displayButton("COMP");
     setForeColour(0,0,255);
-    displayButton("    ");
     displayButton("    ");
     displayButton("    ");
     displayButton("    ");
@@ -3765,10 +3828,115 @@ void showNB1SettingsMenu(void)
     displayButton("    ");
     displayButton("NEXT");
     displayButton("PREV");
-    displayButton("    ");
+    setForeColour(255,165,0);
+    displayButton("COMP>");
+    setForeColour(0,0,255);
     displayButton("    ");
     displayButton("    ");
   }
+
+
+void showCOMPSettingsMenu(void)
+  {
+    gotoXY(funcButtonsX,funcButtonsY);
+    setForeColour(0,255,0);
+    displayButton("MENU");
+    setForeColour(0,0,255);
+    displayButton("    ");
+    displayButton("NEXT");
+    displayButton("PREV");
+    setForeColour(255,165,0);
+    displayButton("NB1>");
+    setForeColour(0,0,255);
+    displayButton("    ");
+    displayButton("    ");
+  }
+
+
+void displayCOMPSetting(int se)
+  {
+    char valStr[30];
+    gotoXY(0,settingY);
+    textSize=2;
+    setForeColour(255,165,0);
+    displayStr("                                                ");
+    gotoXY(0,settingY+8);
+    displayStr("                                                ");
+    gotoXY(settingX,settingY);
+    displayStr(compSettingText[se]);
+    if(se==0)
+      { sprintf(valStr,"0.%03d",compAgcAttack); displayStr(valStr); }
+    if(se==1)
+      { sprintf(valStr,"0.%03d",compAgcDecay); displayStr(valStr); }
+    if(se==2)
+      { sprintf(valStr,"0.%02d",compAgcRef); displayStr(valStr); }
+    if(se==3)
+      { sprintf(valStr,"%d",compAgcMax); displayStr(valStr); }
+    if(se==4)
+      { sprintf(valStr,"%d Hz",compLpfCutoff); displayStr(valStr); }
+  }
+
+
+void sendCOMPParams(void)
+  {
+    char cmd[20];
+    sprintf(cmd,"s%d",compAgcAttack);  sendFifo(cmd);
+    sprintf(cmd,"t%d",compAgcDecay);   sendFifo(cmd);
+    sprintf(cmd,"u%d",compAgcRef);     sendFifo(cmd);
+    sprintf(cmd,"v%d",compAgcMax);     sendFifo(cmd);
+    sprintf(cmd,"w%d",compLpfCutoff);  sendFifo(cmd);
+    sendFifo("c2");    // apply: rebuild chain once if COMP active
+  }
+
+
+void changeCompSetting(void)
+{
+  if(compSettingNo==0)        // AGC Attack (×1000: 1→500)
+    {
+    compAgcAttack += mouseScroll;
+    mouseScroll=0;
+    if(compAgcAttack <   1) compAgcAttack=  1;
+    if(compAgcAttack > 500) compAgcAttack=500;
+    sendCOMPParams();
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==1)        // AGC Decay (×1000: 1→500)
+    {
+    compAgcDecay += mouseScroll;
+    mouseScroll=0;
+    if(compAgcDecay <   1) compAgcDecay=  1;
+    if(compAgcDecay > 500) compAgcDecay=500;
+    sendCOMPParams();
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==2)        // AGC Reference (×100: 10→99)
+    {
+    compAgcRef += mouseScroll;
+    mouseScroll=0;
+    if(compAgcRef < 10) compAgcRef=10;
+    if(compAgcRef > 99) compAgcRef=99;
+    sendCOMPParams();
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==3)        // AGC Max Gain (1→1000)
+    {
+    compAgcMax += mouseScroll;
+    mouseScroll=0;
+    if(compAgcMax <    1) compAgcMax=   1;
+    if(compAgcMax > 1000) compAgcMax=1000;
+    sendCOMPParams();
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==4)        // LPF Cutoff (500→5000 Hz, step 100)
+    {
+    compLpfCutoff += mouseScroll*100;
+    mouseScroll=0;
+    if(compLpfCutoff <  500) compLpfCutoff= 500;
+    if(compLpfCutoff > 5000) compLpfCutoff=5000;
+    sendCOMPParams();
+    displayCOMPSetting(compSettingNo);
+    }
+}
 
 void displayNB1Setting(int se)
   {
@@ -4176,6 +4344,11 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     if(strstr(variable,"nb1Alpha"))     sscanf(value,"%d",&nb1Alpha);
     if(strstr(variable,"nb1Beta"))      sscanf(value,"%d",&nb1Beta);
     if(strstr(variable,"nb1GainFloor")) sscanf(value,"%d",&nb1GainFloor);
+    if(strstr(variable,"compAgcAttack"))  sscanf(value,"%d",&compAgcAttack);
+    if(strstr(variable,"compAgcDecay"))   sscanf(value,"%d",&compAgcDecay);
+    if(strstr(variable,"compAgcRef"))     sscanf(value,"%d",&compAgcRef);
+    if(strstr(variable,"compAgcMax"))     sscanf(value,"%d",&compAgcMax);
+    if(strstr(variable,"compLpfCutoff"))  sscanf(value,"%d",&compLpfCutoff);
     if(mode>nummode-1) mode=0;
             
   }
@@ -4261,6 +4434,11 @@ fprintf(conffile,"nb1Overlap %d\n",nb1Overlap);
 fprintf(conffile,"nb1Alpha %d\n",nb1Alpha);
 fprintf(conffile,"nb1Beta %d\n",nb1Beta);
 fprintf(conffile,"nb1GainFloor %d\n",nb1GainFloor);
+fprintf(conffile,"compAgcAttack %d\n",compAgcAttack);
+fprintf(conffile,"compAgcDecay %d\n",compAgcDecay);
+fprintf(conffile,"compAgcRef %d\n",compAgcRef);
+fprintf(conffile,"compAgcMax %d\n",compAgcMax);
+fprintf(conffile,"compLpfCutoff %d\n",compLpfCutoff);
 
 fclose(conffile);
 return 0;

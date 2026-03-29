@@ -63,6 +63,13 @@ class Lang_TRX_Pluto(gr.top_block):
         self.AMMIC = AMMIC = 5
         self.AFGain = AFGain = 100
 
+        # COMP TX compressor parameters
+        self.comp_agc_attack  = 0.041
+        self.comp_agc_decay   = 0.033
+        self.comp_agc_ref     = 0.90
+        self.comp_agc_max     = 100.0
+        self.comp_lpf_cutoff  = 3500
+
         # NB1 spectral noise reduction parameters
         self.nb1_algorithm  = 0
         self.nb1_fft_size   = 256
@@ -427,6 +434,55 @@ class Lang_TRX_Pluto(gr.top_block):
         self.AFGain = AFGain
         self.blocks_multiply_const_vxx_1.set_k(((self.AFGain/100.0) *  (not self.Rx_Mute)))
 
+    def _comp_connect(self):
+        self.lpf_comp = filter.fir_filter_fff(
+            1,
+            firdes.low_pass(0.9, 48000, self.comp_lpf_cutoff, 500,
+                            window.WIN_HAMMING, 6.76))
+        self.agc2_comp = analog.agc2_ff(
+            self.comp_agc_attack,
+            self.comp_agc_decay,
+            self.comp_agc_ref,
+            1.0,
+            self.comp_agc_max)
+        self.disconnect((self.blocks_multiply_const_vxx_0, 0),
+                        (self.blocks_add_const_vxx_0_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.lpf_comp, 0))
+        self.connect((self.lpf_comp, 0), (self.agc2_comp, 0))
+        self.connect((self.agc2_comp, 0), (self.blocks_add_const_vxx_0_0, 0))
+
+    def _comp_disconnect(self):
+        self.disconnect((self.blocks_multiply_const_vxx_0, 0), (self.lpf_comp, 0))
+        self.disconnect((self.lpf_comp, 0), (self.agc2_comp, 0))
+        self.disconnect((self.agc2_comp, 0), (self.blocks_add_const_vxx_0_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0),
+                     (self.blocks_add_const_vxx_0_0, 0))
+        del self.lpf_comp
+        del self.agc2_comp
+
+    def set_COMP(self, enable):
+        self.lock()
+        if enable:
+            self._comp_connect()
+        else:
+            self._comp_disconnect()
+        self.unlock()
+
+    def set_comp_param(self, param_id, raw_value):
+        if   param_id == 0: self.comp_agc_attack  = raw_value / 1000.0
+        elif param_id == 1: self.comp_agc_decay   = raw_value / 1000.0
+        elif param_id == 2: self.comp_agc_ref      = raw_value / 100.0
+        elif param_id == 3: self.comp_agc_max      = float(raw_value)
+        elif param_id == 4: self.comp_lpf_cutoff   = raw_value
+
+    def comp_apply(self):
+        """Rebuild COMP chain with current params if active."""
+        if hasattr(self, 'agc2_comp'):
+            self.lock()
+            self._comp_disconnect()
+            self._comp_connect()
+            self.unlock()
+
     def _nb1_connect(self):
         self.rational_resampler_nb_down = filter.rational_resampler_fff(
             interpolation=1, decimation=6, taps=[], fractional_bw=0)
@@ -568,6 +624,20 @@ def docommands(tb):
               value=int(line[1:])
               if value == 2: tb.nb1_apply()
               else: tb.set_NB1(value)
+           if line[0]=='c':
+              value=int(line[1:])
+              if value == 2: tb.comp_apply()
+              else: tb.set_COMP(value)
+           if line[0]=='s':
+              tb.set_comp_param(0, int(line[1:]))
+           if line[0]=='t':
+              tb.set_comp_param(1, int(line[1:]))
+           if line[0]=='u':
+              tb.set_comp_param(2, int(line[1:]))
+           if line[0]=='v':
+              tb.set_comp_param(3, int(line[1:]))
+           if line[0]=='w':
+              tb.set_comp_param(4, int(line[1:]))
            if line[0]=='e':
               tb.set_nb1_param(0, int(line[1:]))
            if line[0]=='j':
