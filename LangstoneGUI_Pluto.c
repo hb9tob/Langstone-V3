@@ -284,6 +284,7 @@ int TxAtt=-89;
 int enableGPIOPTT=0;    // GPIO 17 PTT enabled (0=disabled, 1=enabled)
 int enableCWKey=0;      // CW key enabled (0=disabled, 1=enabled)
 int enablePlutoTx=0;    // Pluto TX output enabled (0=disabled, 1=enabled)
+int nb1Active=0;        // NB1 spectral noise reduction active
 
 int tuneDigit=8;
 #define maxTuneDigit 11
@@ -2001,11 +2002,18 @@ if(buttonTouched(funcButtonsX,funcButtonsY))    //Button 1 = BAND or MENU
       
         
     }      
-if(buttonTouched(funcButtonsX+buttonSpaceX,funcButtonsY))    //Button 2 = MODE or Blank
+if(buttonTouched(funcButtonsX+buttonSpaceX,funcButtonsY))    //Button 2 = MODE or NB1
     {
      if((inputMode==FREQ) && (popupSel!=MODE))
       {
       displayPopupMode();
+      return;
+      }
+     else if(inputMode==EXTRA)
+      {
+      nb1Active=!nb1Active;
+      if(nb1Active) sendFifo("N1"); else sendFifo("N0");
+      showExtraMenu();
       return;
       }
       else
@@ -3630,8 +3638,9 @@ void showExtraMenu(void)
     gotoXY(funcButtonsX,funcButtonsY);
     setForeColour(0,255,0);
     displayButton("MENU");
+    if(nb1Active) setForeColour(255,0,0); else setForeColour(0,0,255);
+    displayButton("NB1");
     setForeColour(0,0,255);
-    displayButton("    ");
     displayButton("    ");
     displayButton("    ");
     displayButton("    ");

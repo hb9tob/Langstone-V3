@@ -23,6 +23,7 @@ from gnuradio import eng_notation
 from gnuradio import iio
 from gnuradio import network
 from gnuradio.fft import logpwrfft
+from gnuradio import anr
 import os
 import errno
 
@@ -418,6 +419,39 @@ class Lang_TRX_Pluto(gr.top_block):
         self.AFGain = AFGain
         self.blocks_multiply_const_vxx_1.set_k(((self.AFGain/100.0) *  (not self.Rx_Mute)))
 
+    def set_NB1(self, enable):
+        self.lock()
+        if enable:
+            self.rational_resampler_nb_down = filter.rational_resampler_fff(
+                interpolation=1,
+                decimation=6,
+                taps=[],
+                fractional_bw=0)
+            self.spectral_nr_0 = anr.spectral_nr_ff(
+                fft_size=256,
+                overlap=4,
+                algorithm=0,
+                alpha=0.98,
+                beta=2.0,
+                gain_floor=0.01)
+            self.rational_resampler_nb_up = filter.rational_resampler_fff(
+                interpolation=6,
+                decimation=1,
+                taps=[],
+                fractional_bw=0)
+            self.disconnect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
+            self.connect((self.low_pass_filter_0, 0), (self.rational_resampler_nb_down, 0))
+            self.connect((self.rational_resampler_nb_down, 0), (self.spectral_nr_0, 0))
+            self.connect((self.spectral_nr_0, 0), (self.rational_resampler_nb_up, 0))
+            self.connect((self.rational_resampler_nb_up, 0), (self.audio_sink_0, 0))
+        else:
+            self.disconnect((self.low_pass_filter_0, 0), (self.rational_resampler_nb_down, 0))
+            self.disconnect((self.rational_resampler_nb_down, 0), (self.spectral_nr_0, 0))
+            self.disconnect((self.spectral_nr_0, 0), (self.rational_resampler_nb_up, 0))
+            self.disconnect((self.rational_resampler_nb_up, 0), (self.audio_sink_0, 0))
+            self.connect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
+        self.unlock()
+
 def docommands(tb):
   try:
     os.mkfifo("/tmp/langstoneTRx")
@@ -502,7 +536,10 @@ def docommands(tb):
               tb.set_CTCSS(value)   
            if line[0]=='W':
               value=int(line[1:])
-              tb.set_FFT_SEL(value) 
+              tb.set_FFT_SEL(value)
+           if line[0]=='N':
+              value=int(line[1:])
+              tb.set_NB1(value)
                                                                                 
        except:
          break
