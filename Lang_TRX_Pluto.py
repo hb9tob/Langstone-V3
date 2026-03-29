@@ -449,15 +449,17 @@ class Lang_TRX_Pluto(gr.top_block):
 
     def _comp_connect(self):
         # IIR HPF 1er ordre à ~300Hz (α=exp(-2π*300/48000)=0.9615)
+        # oldstyle=False : rétroaction soustraite → y[n] = ff_sum - fb[1]*y[n-1]
         self.hpf_comp = filter.iir_filter_ffd(
-            [0.9808, -0.9808], [1.0, -0.9615], True)
+            [0.9808, -0.9808], [1.0, -0.9615], False)
         # EQ 3 bandes paramétrables (biquad peaking, Q=0.7)
+        # oldstyle=False requis : pôles stables avec coefficients biquad standard
         ff1, fb1 = self._eq_coeffs(self.comp_eq1_freq, self.comp_eq1_gain)
-        self.eq1_comp = filter.iir_filter_ffd(ff1, fb1, True)
+        self.eq1_comp = filter.iir_filter_ffd(ff1, fb1, False)
         ff2, fb2 = self._eq_coeffs(self.comp_eq2_freq, self.comp_eq2_gain)
-        self.eq2_comp = filter.iir_filter_ffd(ff2, fb2, True)
+        self.eq2_comp = filter.iir_filter_ffd(ff2, fb2, False)
         ff3, fb3 = self._eq_coeffs(self.comp_eq3_freq, self.comp_eq3_gain)
-        self.eq3_comp = filter.iir_filter_ffd(ff3, fb3, True)
+        self.eq3_comp = filter.iir_filter_ffd(ff3, fb3, False)
         # FIR LPF: limite la bande passante SSB
         self.lpf_comp = filter.fir_filter_fff(
             1,
