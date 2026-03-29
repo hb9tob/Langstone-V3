@@ -26,6 +26,7 @@ from gnuradio.fft import logpwrfft
 from gnuradio import anr
 import os
 import errno
+import math
 
 
 
@@ -68,7 +69,10 @@ class Lang_TRX_Pluto(gr.top_block):
         self.comp_agc_decay   = 0.033
         self.comp_agc_ref     = 0.90
         self.comp_agc_max     = 100.0
-        self.comp_lpf_cutoff  = 3000
+        self.comp_lpf_cutoff  = 2700
+        self.comp_eq1_freq    = 500;   self.comp_eq1_gain = 0.0
+        self.comp_eq2_freq    = 1200;  self.comp_eq2_gain = 4.0
+        self.comp_eq3_freq    = 2500;  self.comp_eq3_gain = 6.0
 
         # NB1 spectral noise reduction parameters
         self.nb1_algorithm  = 0
@@ -434,21 +438,32 @@ class Lang_TRX_Pluto(gr.top_block):
         self.AFGain = AFGain
         self.blocks_multiply_const_vxx_1.set_k(((self.AFGain/100.0) *  (not self.Rx_Mute)))
 
+    def _eq_coeffs(self, f0, dB_gain):
+        """Biquad peaking EQ (Q=0.7) pour f0 Hz, gain en dB à fs=48kHz."""
+        A     = 10.0 ** (dB_gain / 40.0)
+        w0    = 2.0 * math.pi * f0 / 48000.0
+        alpha = math.sin(w0) / (2.0 * 0.7)
+        b0 =  1.0 + alpha * A;  b1 = -2.0 * math.cos(w0);  b2 = 1.0 - alpha * A
+        a0 =  1.0 + alpha / A;  a1 = -2.0 * math.cos(w0);  a2 = 1.0 - alpha / A
+        return [b0/a0, b1/a0, b2/a0], [1.0, a1/a0, a2/a0]
+
     def _comp_connect(self):
-        # IIR HPF 1er ordre à ~300Hz: coupe les basses en dessous de la zone voix
-        # Coefficients calculés pour fc=300Hz à fs=48kHz (α=exp(-2π*300/48000)=0.9615)
+        # IIR HPF 1er ordre à ~300Hz (α=exp(-2π*300/48000)=0.9615)
         self.hpf_comp = filter.iir_filter_ffd(
             [0.9808, -0.9808], [1.0, -0.9615], True)
-        # Pré-accentuation: FIR [1, -0.8] → boost doux +6dB à 3kHz vs 300Hz
-        # Renforce la zone d'intelligibilité vocale SSB (1-3kHz)
-        self.preemp_comp = filter.iir_filter_ffd(
-            [1.0, -0.80], [1.0], True)
+        # EQ 3 bandes paramétrables (biquad peaking, Q=0.7)
+        ff1, fb1 = self._eq_coeffs(self.comp_eq1_freq, self.comp_eq1_gain)
+        self.eq1_comp = filter.iir_filter_ffd(ff1, fb1, True)
+        ff2, fb2 = self._eq_coeffs(self.comp_eq2_freq, self.comp_eq2_gain)
+        self.eq2_comp = filter.iir_filter_ffd(ff2, fb2, True)
+        ff3, fb3 = self._eq_coeffs(self.comp_eq3_freq, self.comp_eq3_gain)
+        self.eq3_comp = filter.iir_filter_ffd(ff3, fb3, True)
         # FIR LPF: limite la bande passante SSB
         self.lpf_comp = filter.fir_filter_fff(
             1,
             firdes.low_pass(0.9, 48000, self.comp_lpf_cutoff, 500,
                             window.WIN_HAMMING, 6.76))
-        # AGC2: compresse un signal déjà filtré et pré-accentué
+        # AGC2: compresse un signal déjà filtré et égalisé
         self.agc2_comp = analog.agc2_ff(
             self.comp_agc_attack,
             self.comp_agc_decay,
@@ -458,21 +473,27 @@ class Lang_TRX_Pluto(gr.top_block):
         self.disconnect((self.blocks_multiply_const_vxx_0, 0),
                         (self.blocks_add_const_vxx_0_0, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.hpf_comp, 0))
-        self.connect((self.hpf_comp, 0), (self.preemp_comp, 0))
-        self.connect((self.preemp_comp, 0), (self.lpf_comp, 0))
-        self.connect((self.lpf_comp, 0), (self.agc2_comp, 0))
-        self.connect((self.agc2_comp, 0), (self.blocks_add_const_vxx_0_0, 0))
+        self.connect((self.hpf_comp, 0),   (self.eq1_comp, 0))
+        self.connect((self.eq1_comp, 0),   (self.eq2_comp, 0))
+        self.connect((self.eq2_comp, 0),   (self.eq3_comp, 0))
+        self.connect((self.eq3_comp, 0),   (self.lpf_comp, 0))
+        self.connect((self.lpf_comp, 0),   (self.agc2_comp, 0))
+        self.connect((self.agc2_comp, 0),  (self.blocks_add_const_vxx_0_0, 0))
 
     def _comp_disconnect(self):
         self.disconnect((self.blocks_multiply_const_vxx_0, 0), (self.hpf_comp, 0))
-        self.disconnect((self.hpf_comp, 0), (self.preemp_comp, 0))
-        self.disconnect((self.preemp_comp, 0), (self.lpf_comp, 0))
-        self.disconnect((self.lpf_comp, 0), (self.agc2_comp, 0))
+        self.disconnect((self.hpf_comp, 0),  (self.eq1_comp, 0))
+        self.disconnect((self.eq1_comp, 0),  (self.eq2_comp, 0))
+        self.disconnect((self.eq2_comp, 0),  (self.eq3_comp, 0))
+        self.disconnect((self.eq3_comp, 0),  (self.lpf_comp, 0))
+        self.disconnect((self.lpf_comp, 0),  (self.agc2_comp, 0))
         self.disconnect((self.agc2_comp, 0), (self.blocks_add_const_vxx_0_0, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0),
                      (self.blocks_add_const_vxx_0_0, 0))
         del self.hpf_comp
-        del self.preemp_comp
+        del self.eq1_comp
+        del self.eq2_comp
+        del self.eq3_comp
         del self.lpf_comp
         del self.agc2_comp
 
@@ -490,6 +511,12 @@ class Lang_TRX_Pluto(gr.top_block):
         elif param_id == 2: self.comp_agc_ref      = raw_value / 100.0
         elif param_id == 3: self.comp_agc_max      = float(raw_value)
         elif param_id == 4: self.comp_lpf_cutoff   = raw_value
+        elif param_id == 5: self.comp_eq1_freq     = raw_value
+        elif param_id == 6: self.comp_eq1_gain     = raw_value / 10.0
+        elif param_id == 7: self.comp_eq2_freq     = raw_value
+        elif param_id == 8: self.comp_eq2_gain     = raw_value / 10.0
+        elif param_id == 9: self.comp_eq3_freq     = raw_value
+        elif param_id == 10: self.comp_eq3_gain    = raw_value / 10.0
 
     def comp_apply(self):
         """Rebuild COMP chain with current params if active."""
@@ -654,6 +681,18 @@ def docommands(tb):
               tb.set_comp_param(3, int(line[1:]))
            if line[0]=='w':
               tb.set_comp_param(4, int(line[1:]))
+           if line[0]=='h':
+              tb.set_comp_param(5, int(line[1:]))
+           if line[0]=='k':
+              tb.set_comp_param(6, int(line[1:]))
+           if line[0]=='m':
+              tb.set_comp_param(7, int(line[1:]))
+           if line[0]=='n':
+              tb.set_comp_param(8, int(line[1:]))
+           if line[0]=='o':
+              tb.set_comp_param(9, int(line[1:]))
+           if line[0]=='q':
+              tb.set_comp_param(10, int(line[1:]))
            if line[0]=='e':
               tb.set_nb1_param(0, int(line[1:]))
            if line[0]=='j':

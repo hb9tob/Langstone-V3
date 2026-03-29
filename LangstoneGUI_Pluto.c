@@ -308,10 +308,13 @@ int compAgcAttack=41;     // ×1000 → 0.041
 int compAgcDecay=33;      // ×1000 → 0.033
 int compAgcRef=90;        // ×100  → 0.90
 int compAgcMax=100;       // integer → 100.0
-int compLpfCutoff=3000;   // Hz
+int compLpfCutoff=2700;   // Hz
+int compEq1Freq=500;  int compEq1Gain=0;    // EQ band 1: ×10 dB → 0.0 dB
+int compEq2Freq=1200; int compEq2Gain=40;   // EQ band 2: ×10 dB → +4.0 dB
+int compEq3Freq=2500; int compEq3Gain=60;   // EQ band 3: ×10 dB → +6.0 dB
 int compSettingNo=0;
-#define numCOMPSettings 5
-char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= "};
+#define numCOMPSettings 11
+char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= ","EQ1 Freq= ","EQ1 Gain= ","EQ2 Freq= ","EQ2 Gain= ","EQ3 Freq= ","EQ3 Gain= "};
 
 int tuneDigit=8;
 #define maxTuneDigit 11
@@ -3878,6 +3881,18 @@ void displayCOMPSetting(int se)
       { sprintf(valStr,"%d",compAgcMax); displayStr(valStr); }
     if(se==4)
       { sprintf(valStr,"%d Hz",compLpfCutoff); displayStr(valStr); }
+    if(se==5)
+      { sprintf(valStr,"%d Hz",compEq1Freq); displayStr(valStr); }
+    if(se==6)
+      { sprintf(valStr,"%+d.%d dB",compEq1Gain/10,abs(compEq1Gain%10)); displayStr(valStr); }
+    if(se==7)
+      { sprintf(valStr,"%d Hz",compEq2Freq); displayStr(valStr); }
+    if(se==8)
+      { sprintf(valStr,"%+d.%d dB",compEq2Gain/10,abs(compEq2Gain%10)); displayStr(valStr); }
+    if(se==9)
+      { sprintf(valStr,"%d Hz",compEq3Freq); displayStr(valStr); }
+    if(se==10)
+      { sprintf(valStr,"%+d.%d dB",compEq3Gain/10,abs(compEq3Gain%10)); displayStr(valStr); }
   }
 
 
@@ -3889,6 +3904,12 @@ void sendCOMPParams(void)
     sprintf(cmd,"u%d",compAgcRef);     sendFifo(cmd);
     sprintf(cmd,"v%d",compAgcMax);     sendFifo(cmd);
     sprintf(cmd,"w%d",compLpfCutoff);  sendFifo(cmd);
+    sprintf(cmd,"h%d",compEq1Freq);    sendFifo(cmd);
+    sprintf(cmd,"k%d",compEq1Gain);    sendFifo(cmd);
+    sprintf(cmd,"m%d",compEq2Freq);    sendFifo(cmd);
+    sprintf(cmd,"n%d",compEq2Gain);    sendFifo(cmd);
+    sprintf(cmd,"o%d",compEq3Freq);    sendFifo(cmd);
+    sprintf(cmd,"q%d",compEq3Gain);    sendFifo(cmd);
     sendFifo("c2");    // apply: rebuild chain once if COMP active
   }
 
@@ -3933,6 +3954,54 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compLpfCutoff <  500) compLpfCutoff= 500;
     if(compLpfCutoff > 5000) compLpfCutoff=5000;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==5)        // EQ1 Freq (200→4000 Hz, step 50)
+    {
+    compEq1Freq += mouseScroll*50;
+    mouseScroll=0;
+    if(compEq1Freq <  200) compEq1Freq= 200;
+    if(compEq1Freq > 4000) compEq1Freq=4000;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==6)        // EQ1 Gain (×10 dB: -120→+120 = -12.0→+12.0 dB)
+    {
+    compEq1Gain += mouseScroll;
+    mouseScroll=0;
+    if(compEq1Gain < -120) compEq1Gain=-120;
+    if(compEq1Gain >  120) compEq1Gain= 120;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==7)        // EQ2 Freq (200→4000 Hz, step 50)
+    {
+    compEq2Freq += mouseScroll*50;
+    mouseScroll=0;
+    if(compEq2Freq <  200) compEq2Freq= 200;
+    if(compEq2Freq > 4000) compEq2Freq=4000;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==8)        // EQ2 Gain (×10 dB: -120→+120)
+    {
+    compEq2Gain += mouseScroll;
+    mouseScroll=0;
+    if(compEq2Gain < -120) compEq2Gain=-120;
+    if(compEq2Gain >  120) compEq2Gain= 120;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==9)        // EQ3 Freq (200→4000 Hz, step 50)
+    {
+    compEq3Freq += mouseScroll*50;
+    mouseScroll=0;
+    if(compEq3Freq <  200) compEq3Freq= 200;
+    if(compEq3Freq > 4000) compEq3Freq=4000;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==10)       // EQ3 Gain (×10 dB: -120→+120)
+    {
+    compEq3Gain += mouseScroll;
+    mouseScroll=0;
+    if(compEq3Gain < -120) compEq3Gain=-120;
+    if(compEq3Gain >  120) compEq3Gain= 120;
     displayCOMPSetting(compSettingNo);
     }
 }
@@ -4348,6 +4417,12 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     if(strstr(variable,"compAgcRef"))     sscanf(value,"%d",&compAgcRef);
     if(strstr(variable,"compAgcMax"))     sscanf(value,"%d",&compAgcMax);
     if(strstr(variable,"compLpfCutoff"))  sscanf(value,"%d",&compLpfCutoff);
+    if(strstr(variable,"compEq1Freq"))    sscanf(value,"%d",&compEq1Freq);
+    if(strstr(variable,"compEq1Gain"))    sscanf(value,"%d",&compEq1Gain);
+    if(strstr(variable,"compEq2Freq"))    sscanf(value,"%d",&compEq2Freq);
+    if(strstr(variable,"compEq2Gain"))    sscanf(value,"%d",&compEq2Gain);
+    if(strstr(variable,"compEq3Freq"))    sscanf(value,"%d",&compEq3Freq);
+    if(strstr(variable,"compEq3Gain"))    sscanf(value,"%d",&compEq3Gain);
     if(mode>nummode-1) mode=0;
             
   }
@@ -4438,6 +4513,12 @@ fprintf(conffile,"compAgcDecay %d\n",compAgcDecay);
 fprintf(conffile,"compAgcRef %d\n",compAgcRef);
 fprintf(conffile,"compAgcMax %d\n",compAgcMax);
 fprintf(conffile,"compLpfCutoff %d\n",compLpfCutoff);
+fprintf(conffile,"compEq1Freq %d\n",compEq1Freq);
+fprintf(conffile,"compEq1Gain %d\n",compEq1Gain);
+fprintf(conffile,"compEq2Freq %d\n",compEq2Freq);
+fprintf(conffile,"compEq2Gain %d\n",compEq2Gain);
+fprintf(conffile,"compEq3Freq %d\n",compEq3Freq);
+fprintf(conffile,"compEq3Gain %d\n",compEq3Gain);
 
 fclose(conffile);
 return 0;
