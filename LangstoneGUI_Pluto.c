@@ -3808,6 +3808,7 @@ void sendNB1Params(void)
     sprintf(cmd,"x%d",nb1Alpha);      sendFifo(cmd);
     sprintf(cmd,"y%d",nb1Beta);       sendFifo(cmd);
     sprintf(cmd,"z%d",nb1GainFloor);  sendFifo(cmd);
+    sendFifo("N2");    // apply: rebuild chain once if NB1 active
   }
 
 void displaySetting(int se)

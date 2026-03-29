@@ -470,6 +470,9 @@ class Lang_TRX_Pluto(gr.top_block):
         elif param_id == 3: self.nb1_alpha       = raw_value / 100.0
         elif param_id == 4: self.nb1_beta        = raw_value / 10.0
         elif param_id == 5: self.nb1_gain_floor  = raw_value / 1000.0
+
+    def nb1_apply(self):
+        """Rebuild NB1 chain with current params if active. Call after set_nb1_param()."""
         if hasattr(self, 'spectral_nr_0'):
             self.lock()
             self._nb1_disconnect()
@@ -563,7 +566,8 @@ def docommands(tb):
               tb.set_FFT_SEL(value)
            if line[0]=='N':
               value=int(line[1:])
-              tb.set_NB1(value)
+              if value == 2: tb.nb1_apply()
+              else: tb.set_NB1(value)
            if line[0]=='e':
               tb.set_nb1_param(0, int(line[1:]))
            if line[0]=='j':
