@@ -107,6 +107,64 @@ The initial build can take some time, however it does not need any user input, s
 
 ---
 
+# Installation du fork HB9TOB — Adalm Pluto (from scratch)
+
+Cette section décrit l'installation complète du fork HB9TOB sur un Raspberry Pi neuf.
+Les instructions matérielles sont identiques à celles du projet original (voir ci-dessus) ; seules les commandes d'installation diffèrent.
+
+## 1. Préparer la carte SD
+
+- Télécharger et lancer **Raspberry Pi Imager** : https://www.raspberrypi.com/software/
+- Appareil : **Raspberry Pi 5**
+- OS : **Raspberry Pi OS Lite (64 bit)**  ← version Lite uniquement
+- Activer SSH avec authentification par mot de passe
+- Utilisateur : `pi` / Mot de passe : `raspberry`
+- Laisser le WiFi vide, désactiver Raspberry Pi Connect
+- Écrire la carte, connecter l'écran tactile, la souris USB, la carte son USB et le Pluto, puis démarrer le Pi
+
+## 2. Se connecter en SSH
+
+Trouver l'adresse IP du Pi (via votre routeur ou un scanner IP), puis :
+
+```bash
+ssh pi@<adresse-ip>
+# mot de passe : raspberry
+```
+
+## 3. Lancer l'installation
+
+Copier-coller ces trois lignes une par une :
+
+```bash
+wget https://raw.githubusercontent.com/hb9tob/Langstone-V3/main/installPluto.sh
+chmod +x installPluto.sh
+./installPluto.sh
+```
+
+Le script effectue automatiquement :
+- Mise à jour du système
+- Installation de GNU Radio et des dépendances
+- Compilation et installation de **libiio** (pilote Pluto)
+- Compilation et installation de **lgpio** (GPIO Raspberry Pi)
+- Compilation et installation de **gr-anr** (module GNU Radio pour la réduction de bruit NB1)
+- Optimisation GNU Radio : profil VOLK (SIMD) + gouverneur CPU `performance`
+- Téléchargement et compilation de **Langstone-V3 fork HB9TOB**
+- Configuration du démarrage automatique
+
+L'installation dure environ 20–30 minutes sans intervention. Le Pi redémarre automatiquement à la fin et lance le transceiver.
+
+## 4. Première mise en route
+
+Au premier démarrage, les paramètres de sécurité sont **tous désactivés par défaut** :
+- GPIO PTT → désactivé
+- CW Key → désactivé
+- Sortie RF Pluto → désactivée
+- Atténuation TX → maximum (−89 dB)
+
+Vérifier le câblage et le matériel avant d'activer ces paramètres via **SET → (défiler jusqu'à Enable GPIO PTT / Enable CW Key / Enable Pluto TX)**.
+
+---
+
 # Modifications HB9TOB (fork)
 
 This fork adds the following changes to the original Langstone-V3 project (Pluto version).
