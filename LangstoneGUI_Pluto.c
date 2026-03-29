@@ -2204,7 +2204,7 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*4,funcButtonsY))    //Button 5 =MONI 
 
     }
 
-if(buttonTouched(funcButtonsX+buttonSpaceX*5,funcButtonsY))    //Button 6 = BEACON  or Exit to Portsdown
+if(buttonTouched(funcButtonsX+buttonSpaceX*5,funcButtonsY))    //Button 6 = BEACON or APPLY or Exit to Portsdown
     {
     if(inputMode==FREQ)
       {
@@ -2216,7 +2216,7 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*5,funcButtonsY))    //Button 6 = BEAC
         {
         setBeacon(0);
         }
- 
+
       return;
       }
       else if (inputMode==SETTINGS)
@@ -2227,8 +2227,18 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*5,funcButtonsY))    //Button 6 = BEAC
          clearScreen();
          writeConfig();
          iio_context_destroy(plutoctx);
-         sleep(2);                  
+         sleep(2);
          exit(0);
+      }
+      else if (inputMode==NB1_SETTINGS)
+      {
+        sendNB1Params();
+        return;
+      }
+      else if (inputMode==COMP_SETTINGS)
+      {
+        sendCOMPParams();
+        return;
       }
       else
       {
@@ -3326,7 +3336,6 @@ void changeNB1Setting(void)
     mouseScroll=0;
     if(nb1Algorithm < 0) nb1Algorithm=0;
     if(nb1Algorithm > 2) nb1Algorithm=2;
-    sendNB1Params();
     displayNB1Setting(nb1SettingNo);
     }
   if(nb1SettingNo==1)        // FFT Size (powers of 2: 64→1024)
@@ -3334,7 +3343,6 @@ void changeNB1Setting(void)
     if(mouseScroll > 0 && nb1FftSize < 1024) nb1FftSize *= 2;
     if(mouseScroll < 0 && nb1FftSize >   64) nb1FftSize /= 2;
     mouseScroll=0;
-    sendNB1Params();
     displayNB1Setting(nb1SettingNo);
     }
   if(nb1SettingNo==2)        // Overlap (powers of 2: 2→16)
@@ -3342,7 +3350,6 @@ void changeNB1Setting(void)
     if(mouseScroll > 0 && nb1Overlap < 16) nb1Overlap *= 2;
     if(mouseScroll < 0 && nb1Overlap >  2) nb1Overlap /= 2;
     mouseScroll=0;
-    sendNB1Params();
     displayNB1Setting(nb1SettingNo);
     }
   if(nb1SettingNo==3)        // Alpha (×100: 80→99)
@@ -3351,7 +3358,6 @@ void changeNB1Setting(void)
     mouseScroll=0;
     if(nb1Alpha < 80) nb1Alpha=80;
     if(nb1Alpha > 99) nb1Alpha=99;
-    sendNB1Params();
     displayNB1Setting(nb1SettingNo);
     }
   if(nb1SettingNo==4)        // Beta (×10: 5→50)
@@ -3360,7 +3366,6 @@ void changeNB1Setting(void)
     mouseScroll=0;
     if(nb1Beta <  5) nb1Beta= 5;
     if(nb1Beta > 50) nb1Beta=50;
-    sendNB1Params();
     displayNB1Setting(nb1SettingNo);
     }
   if(nb1SettingNo==5)        // Gain Floor (×1000: 1→100)
@@ -3369,7 +3374,6 @@ void changeNB1Setting(void)
     mouseScroll=0;
     if(nb1GainFloor <   1) nb1GainFloor=  1;
     if(nb1GainFloor > 100) nb1GainFloor=100;
-    sendNB1Params();
     displayNB1Setting(nb1SettingNo);
     }
 }
@@ -3830,8 +3834,8 @@ void showNB1SettingsMenu(void)
     displayButton("PREV");
     setForeColour(255,165,0);
     displayButton("COMP>");
+    displayButton("APPLY");
     setForeColour(0,0,255);
-    displayButton("    ");
     displayButton("    ");
   }
 
@@ -3847,8 +3851,8 @@ void showCOMPSettingsMenu(void)
     displayButton("PREV");
     setForeColour(255,165,0);
     displayButton("NB1>");
+    displayButton("APPLY");
     setForeColour(0,0,255);
-    displayButton("    ");
     displayButton("    ");
   }
 
@@ -3897,7 +3901,6 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compAgcAttack <   1) compAgcAttack=  1;
     if(compAgcAttack > 500) compAgcAttack=500;
-    sendCOMPParams();
     displayCOMPSetting(compSettingNo);
     }
   if(compSettingNo==1)        // AGC Decay (×1000: 1→500)
@@ -3906,7 +3909,6 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compAgcDecay <   1) compAgcDecay=  1;
     if(compAgcDecay > 500) compAgcDecay=500;
-    sendCOMPParams();
     displayCOMPSetting(compSettingNo);
     }
   if(compSettingNo==2)        // AGC Reference (×100: 10→99)
@@ -3915,7 +3917,6 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compAgcRef < 10) compAgcRef=10;
     if(compAgcRef > 99) compAgcRef=99;
-    sendCOMPParams();
     displayCOMPSetting(compSettingNo);
     }
   if(compSettingNo==3)        // AGC Max Gain (1→1000)
@@ -3924,7 +3925,6 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compAgcMax <    1) compAgcMax=   1;
     if(compAgcMax > 1000) compAgcMax=1000;
-    sendCOMPParams();
     displayCOMPSetting(compSettingNo);
     }
   if(compSettingNo==4)        // LPF Cutoff (500→5000 Hz, step 100)
@@ -3933,7 +3933,6 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compLpfCutoff <  500) compLpfCutoff= 500;
     if(compLpfCutoff > 5000) compLpfCutoff=5000;
-    sendCOMPParams();
     displayCOMPSetting(compSettingNo);
     }
 }
