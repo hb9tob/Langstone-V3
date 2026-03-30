@@ -390,7 +390,6 @@ struct iio_device *plutophy;
 #define FFTTIMEOUT 200                //timeout for FFT data 200 * 10ms = 2 seconds
 
 int FFTTimeout;
-long long lastFftTime=0;
 
 
 
@@ -430,8 +429,6 @@ int main(int argc, char* argv[])
   gen_palette((char [][3]){ {0,0,0},{0,0,255},{0,255,0},{255,255,0},{255,0,0}},4);
 
   
-  printf("Main loop starting, FFTTimeout=%d\n",FFTTimeout); fflush(stdout);
-
   while(1)
   {
 
@@ -550,9 +547,6 @@ int main(int argc, char* argv[])
     }
     else
     {
-      { int gnrRunning=(system("ps -ax | grep -v grep | grep -q Lang_TRX_Pluto.py")==0);
-        printf("FFTTimeout expired at runtime=%lld ms, last FFT was at %lld ms, GNURadio running=%d\n",
-               runTimeMs(), lastFftTime, gnrRunning); fflush(stdout); }
       restartGNURadio();                                         //attempt to restart GNU Radio.
     }
    
@@ -644,9 +638,6 @@ void waterfall()
       
       if(ret>0)
     {
-       static int fftFirstLog=1;
-       if(fftFirstLog) { printf("First FFT data received at runtime=%lld ms\n",runTimeMs()); fflush(stdout); fftFirstLog=0; }
-       lastFftTime=runTimeMs();
        FFTTimeout = FFTTIMEOUT;
     
         //shift buffer
@@ -2880,8 +2871,11 @@ void setTx(int pt)
       if(satMode()==0)
       {
         sMeter=0;
-        setHwRxFreq(freq+10.0);               //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!) 
-        PlutoRxEnable(0);
+        if(firstpass==0)                       //skip RX disable during firstpass init to avoid disrupting GNU Radio IIO stream
+        {
+          setHwRxFreq(freq+10.0);              //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!)
+          PlutoRxEnable(0);
+        }
       }
       if(satMode()==0)
       {
@@ -4576,10 +4570,8 @@ void startGNURadio(void)
    FFTTimeout = FFTTIMEOUT * 10;                               //allow time to start (20 seconds)
    if(system("ps -ax | grep -v grep | grep -q Lang_TRX_Pluto.py") == 0)
    {
-      printf("GNU Radio already running, FFTTimeout=%d\n",FFTTimeout); fflush(stdout);
       return;
    }
-   printf("Starting GNU Radio, FFTTimeout=%d\n",FFTTimeout); fflush(stdout);
    system("python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
 }
 
