@@ -429,9 +429,11 @@ int main(int argc, char* argv[])
   gen_palette((char [][3]){ {0,0,0},{0,0,255},{0,255,0},{255,255,0},{255,0,0}},4);
 
   
+  printf("Main loop starting, FFTTimeout=%d\n",FFTTimeout); fflush(stdout);
+
   while(1)
   {
-  
+
     processGPIO();
                                                                                                                     
    if(touchPresent)
@@ -547,7 +549,8 @@ int main(int argc, char* argv[])
     }
     else
     {
-      restartGNURadio();                                         //attempt to restart GNUU Radio.
+      printf("FFTTimeout expired, restarting GNURadio at runtime=%lld ms\n",runTimeMs()); fflush(stdout);
+      restartGNURadio();                                         //attempt to restart GNU Radio.
     }
    
     
@@ -637,8 +640,9 @@ void waterfall()
         }
       
       if(ret>0)
-    {    
-       
+    {
+       static int fftFirstLog=1;
+       if(fftFirstLog) { printf("First FFT data received at runtime=%lld ms\n",runTimeMs()); fflush(stdout); fftFirstLog=0; }
        FFTTimeout = FFTTIMEOUT;
     
         //shift buffer
@@ -4568,10 +4572,10 @@ void startGNURadio(void)
    FFTTimeout = FFTTIMEOUT * 10;                               //allow time to start (20 seconds)
    if(system("ps -ax | grep -v grep | grep -q Lang_TRX_Pluto.py") == 0)
    {
-      printf("GNU Radio already running\n");                   //started externally (e.g. by run script), don't start a second instance
+      printf("GNU Radio already running, FFTTimeout=%d\n",FFTTimeout); fflush(stdout);
       return;
    }
-   printf("Starting GNU Radio\n");
+   printf("Starting GNU Radio, FFTTimeout=%d\n",FFTTimeout); fflush(stdout);
    system("python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
 }
 
