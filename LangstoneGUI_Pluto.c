@@ -4527,8 +4527,13 @@ return 0;
 
 void startGNURadio(void)
 {
-   printf("Starting GNU Radio\n");
    FFTTimeout = FFTTIMEOUT * 10;                               //allow time to start (20 seconds)
+   if(system("ps -ax | grep -v grep | grep -q Lang_TRX_Pluto.py") == 0)
+   {
+      printf("GNU Radio already running\n");                   //started externally (e.g. by run script), don't start a second instance
+      return;
+   }
+   printf("Starting GNU Radio\n");
    system("python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
 }
 
