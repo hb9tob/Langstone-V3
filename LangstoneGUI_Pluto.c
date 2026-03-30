@@ -390,6 +390,7 @@ struct iio_device *plutophy;
 #define FFTTIMEOUT 200                //timeout for FFT data 200 * 10ms = 2 seconds
 
 int FFTTimeout;
+long long lastFftTime=0;
 
 
 
@@ -549,8 +550,7 @@ int main(int argc, char* argv[])
     }
     else
     {
-      { extern long long lastFftTime;
-        int gnrRunning=(system("ps -ax | grep -v grep | grep -q Lang_TRX_Pluto.py")==0);
+      { int gnrRunning=(system("ps -ax | grep -v grep | grep -q Lang_TRX_Pluto.py")==0);
         printf("FFTTimeout expired at runtime=%lld ms, last FFT was at %lld ms, GNURadio running=%d\n",
                runTimeMs(), lastFftTime, gnrRunning); fflush(stdout); }
       restartGNURadio();                                         //attempt to restart GNU Radio.
@@ -645,7 +645,6 @@ void waterfall()
       if(ret>0)
     {
        static int fftFirstLog=1;
-       static long long lastFftTime=0;
        if(fftFirstLog) { printf("First FFT data received at runtime=%lld ms\n",runTimeMs()); fflush(stdout); fftFirstLog=0; }
        lastFftTime=runTimeMs();
        FFTTimeout = FFTTIMEOUT;
