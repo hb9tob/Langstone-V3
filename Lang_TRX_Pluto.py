@@ -73,6 +73,7 @@ class Lang_TRX_Pluto(gr.top_block):
         self.comp_eq1_freq    = 500;   self.comp_eq1_gain = 0.0
         self.comp_eq2_freq    = 1200;  self.comp_eq2_gain = 4.0
         self.comp_eq3_freq    = 2500;  self.comp_eq3_gain = 6.0
+        self.comp_mic_gain    = 50     # 0-100, maps to gain 0.0-1.0 when COMP active
 
         # NB1 spectral noise reduction parameters
         self.nb1_algorithm  = 0
@@ -472,6 +473,7 @@ class Lang_TRX_Pluto(gr.top_block):
             self.comp_agc_ref,
             1.0,
             self.comp_agc_max)
+        self.blocks_multiply_const_vxx_0.set_k(self.comp_mic_gain / 100.0)
         self.disconnect((self.blocks_multiply_const_vxx_0, 0),
                         (self.blocks_add_const_vxx_0_0, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.hpf_comp, 0))
@@ -492,6 +494,7 @@ class Lang_TRX_Pluto(gr.top_block):
         self.disconnect((self.agc2_comp, 0), (self.blocks_add_const_vxx_0_0, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0),
                      (self.blocks_add_const_vxx_0_0, 0))
+        self.blocks_multiply_const_vxx_0.set_k(((self.MicGain)*(int(self.Tx_Mode==0)) + (self.MicGain)*(int(self.Tx_Mode==1)) + (self.AMMIC/10.0)*(int(self.Tx_Mode==5)) ))
         del self.hpf_comp
         del self.eq1_comp
         del self.eq2_comp
@@ -519,6 +522,10 @@ class Lang_TRX_Pluto(gr.top_block):
         elif param_id == 8: self.comp_eq2_gain     = raw_value / 10.0
         elif param_id == 9: self.comp_eq3_freq     = raw_value
         elif param_id == 10: self.comp_eq3_gain    = raw_value / 10.0
+        elif param_id == 11:
+            self.comp_mic_gain = raw_value
+            if hasattr(self, 'agc2_comp'):   # COMP is active, apply immediately
+                self.blocks_multiply_const_vxx_0.set_k(self.comp_mic_gain / 100.0)
 
     def comp_apply(self):
         """Rebuild COMP chain with current params if active."""
@@ -695,6 +702,8 @@ def docommands(tb):
               tb.set_comp_param(9, int(line[1:]))
            if line[0]=='q':
               tb.set_comp_param(10, int(line[1:]))
+           if line[0]=='r':
+              tb.set_comp_param(11, int(line[1:]))
            if line[0]=='e':
               tb.set_nb1_param(0, int(line[1:]))
            if line[0]=='j':

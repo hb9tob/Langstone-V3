@@ -94,6 +94,7 @@ int readPlutoRxGain(void);
 void setBand(int b);
 void setPlutoGpo(int p);
 void setTxPin(int v);
+void setAlsaCapture(int level);
 long long runTimeMs(void);                                                    
 void clearPopUp(void);
 void displayPopupMode(void);
@@ -312,9 +313,12 @@ int compLpfCutoff=2700;   // Hz
 int compEq1Freq=500;  int compEq1Gain=0;    // EQ band 1: ×10 dB → 0.0 dB
 int compEq2Freq=1200; int compEq2Gain=40;   // EQ band 2: ×10 dB → +4.0 dB
 int compEq3Freq=2500; int compEq3Gain=60;   // EQ band 3: ×10 dB → +6.0 dB
+int compMicGain=50;                         // 0-100 → GNU Radio gain 0.0-1.0 when COMP active
+int alsaCaptureLevel=70;                    // 0-100 % for ALSA Mic Capture Volume
+
 int compSettingNo=0;
-#define numCOMPSettings 11
-char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= ","EQ1 Freq= ","EQ1 Gain= ","EQ2 Freq= ","EQ2 Gain= ","EQ3 Freq= ","EQ3 Gain= "};
+#define numCOMPSettings 13
+char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= ","EQ1 Freq= ","EQ1 Gain= ","EQ2 Freq= ","EQ2 Gain= ","EQ3 Freq= ","EQ3 Gain= ","Mic Gain= ","Capture= "};
 
 int tuneDigit=8;
 #define maxTuneDigit 11
@@ -1615,6 +1619,7 @@ void initSDR(void)
   setFreqInc();
   lastLOhz=0;
   setFreq(freq);
+  setAlsaCapture(alsaCaptureLevel);
   setTx(0);
 }
 
@@ -3892,6 +3897,10 @@ void displayCOMPSetting(int se)
       { sprintf(valStr,"%d Hz",compEq3Freq); displayStr(valStr); }
     if(se==10)
       { sprintf(valStr,"%+d.%d dB",compEq3Gain/10,abs(compEq3Gain%10)); displayStr(valStr); }
+    if(se==11)
+      { sprintf(valStr,"%d %%",compMicGain); displayStr(valStr); }
+    if(se==12)
+      { sprintf(valStr,"%d %%",alsaCaptureLevel); displayStr(valStr); }
   }
 
 
@@ -3909,6 +3918,8 @@ void sendCOMPParams(void)
     sprintf(cmd,"n%d",compEq2Gain);    sendFifo(cmd);
     sprintf(cmd,"o%d",compEq3Freq);    sendFifo(cmd);
     sprintf(cmd,"q%d",compEq3Gain);    sendFifo(cmd);
+    sprintf(cmd,"r%d",compMicGain);    sendFifo(cmd);
+    setAlsaCapture(alsaCaptureLevel);
     sendFifo("c2");    // apply: rebuild chain once if COMP active
   }
 
@@ -4001,6 +4012,22 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compEq3Gain < -120) compEq3Gain=-120;
     if(compEq3Gain >  120) compEq3Gain= 120;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==11)       // COMP Mic Gain (0→100, maps to GNU Radio gain 0.0→1.0)
+    {
+    compMicGain += mouseScroll;
+    mouseScroll=0;
+    if(compMicGain <   0) compMicGain=  0;
+    if(compMicGain > 100) compMicGain=100;
+    displayCOMPSetting(compSettingNo);
+    }
+  if(compSettingNo==12)       // ALSA Mic Capture Level (0→100 %)
+    {
+    alsaCaptureLevel += mouseScroll;
+    mouseScroll=0;
+    if(alsaCaptureLevel <   0) alsaCaptureLevel=  0;
+    if(alsaCaptureLevel > 100) alsaCaptureLevel=100;
     displayCOMPSetting(compSettingNo);
     }
 }
@@ -4422,6 +4449,8 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     if(strstr(variable,"compEq2Gain"))    sscanf(value,"%d",&compEq2Gain);
     if(strstr(variable,"compEq3Freq"))    sscanf(value,"%d",&compEq3Freq);
     if(strstr(variable,"compEq3Gain"))    sscanf(value,"%d",&compEq3Gain);
+    if(strstr(variable,"compMicGain"))    sscanf(value,"%d",&compMicGain);
+    if(strstr(variable,"alsaCaptureLevel")) sscanf(value,"%d",&alsaCaptureLevel);
     if(mode>nummode-1) mode=0;
             
   }
@@ -4518,12 +4547,21 @@ fprintf(conffile,"compEq2Freq %d\n",compEq2Freq);
 fprintf(conffile,"compEq2Gain %d\n",compEq2Gain);
 fprintf(conffile,"compEq3Freq %d\n",compEq3Freq);
 fprintf(conffile,"compEq3Gain %d\n",compEq3Gain);
+fprintf(conffile,"compMicGain %d\n",compMicGain);
+fprintf(conffile,"alsaCaptureLevel %d\n",alsaCaptureLevel);
 
 fclose(conffile);
 return 0;
 
 }
 
+
+void setAlsaCapture(int level)
+{
+   char cmd[100];
+   sprintf(cmd, "amixer -c 1 cset numid=4 %d%% > /dev/null 2>&1", level);
+   system(cmd);
+}
 
 void startGNURadio(void)
 {
