@@ -16,7 +16,7 @@ Currently only the following hardware is supported:-
 
 - Official Original Raspberry Pi 7" 800 x 480 Version 1 touchscreen or Version 2 7" 1280 x 720 touchscreen.
 
-- RPi5 to Touchscreen flat cable. (this may need to be purchased seperately as the cable supplied with the V1 Touch Screen is not suitable)
+- RPi5 to Touchscreen flat cable. (this may need to be purchased separately as the cable supplied with the V1 Touch Screen is not suitable)
 
 - Adalm Pluto or HackRF One SDR Modules.
 
@@ -32,7 +32,7 @@ Currently only the following hardware is supported:-
 
 - 8 Band select Outputs on GPIO 1 (pin 28), GPIO 19 (pin 35), GPIO 4 (pin 7), GPIO 25 (pin 22), GPIO 22 (pin 16), GPIO 24 (pin 18), GPIO 10 (pin 19), and GPIO 9 (Pin 21). These can be used to select external filters, amplifiers or Transverters. The state of these outputs is defined using the Band Bits setting.
 
-- On the Adalm Pluto the TX output and first three of the Band Select outputs are also available on the Internal Pluto GPO connector. GPO0 is the Tx Output, GPO1-3 are the Band Select outputs.The main use for these is for when the Pluto is remotely mounted. Care must be taken as these pins are low voltage. They will need to be buffered before use.
+- On the Adalm Pluto the TX output and first three of the Band Select outputs are also available on the Internal Pluto GPO connector. GPO0 is the Tx Output, GPO1-3 are the Band Select outputs. The main use for these is for when the Pluto is remotely mounted. Care must be taken as these pins are low voltage. They will need to be buffered before use.
 
 To build a complete functional transceiver you will need to add suitable filters, preamplifiers and power amplifiers to the SDR Module.
 
@@ -40,7 +40,7 @@ All control is done using the touchscreen and mouse.
 
 Tuning uses the mouse scrollwheel. The mouse left and right buttons select the tuning step. The centre button is used for the CW key.  Mouse movement is not used.
 
-A mouse is used to provide the tuning input because it effectively hands the task of monitoring the tuning knob to a seperate processor (in the mouse). Rotary encoders can be tricky to handle reliably in linux.
+A mouse is used to provide the tuning input because it effectively hands the task of monitoring the tuning knob to a separate processor (in the mouse). Rotary encoders can be tricky to handle reliably in linux.
 
 Microphone input and headphone output uses the USB audio device. (a couple of pounds on Ebay)
 
@@ -54,7 +54,7 @@ The preferred installation method only needs a Windows PC connected to the same 
 
 - Download and install the Raspberry Pi Imager utility from https://downloads.raspberrypi.org/imager/imager_latest.exe
 
-- These instructions are based on verdsion 2.0.6 of the Imager program. Other versions may differ but you should try to acheive the same settings.
+- These instructions are based on version 2.0.6 of the Imager program. Other versions may differ but you should try to achieve the same settings.
 
 - Start the Imager Utility, Select 'Raspberry Pi 5' as the Raspberry Pi Device.
 
@@ -72,7 +72,7 @@ The preferred installation method only needs a Windows PC connected to the same 
 
 - Leave the WIFI settings Blank
 
-- Selact 'Enable SSH' and 'Use Password authentication'
+- Select 'Enable SSH' and 'Use Password authentication'
 
 - Disable Raspberry Pi Connect
 
@@ -107,33 +107,33 @@ The initial build can take some time, however it does not need any user input, s
 
 ---
 
-# Installation du fork HB9TOB — Adalm Pluto (from scratch)
+# HB9TOB Fork — Fresh Install (Adalm Pluto)
 
-Cette section décrit l'installation complète du fork HB9TOB sur un Raspberry Pi neuf.
-Les instructions matérielles sont identiques à celles du projet original (voir ci-dessus) ; seules les commandes d'installation diffèrent.
+This section describes a complete fresh installation of the HB9TOB fork on a new Raspberry Pi.
+The hardware requirements are identical to the original project (see above); only the install commands differ.
 
-## 1. Préparer la carte SD
+## 1. Prepare the SD card
 
-- Télécharger et lancer **Raspberry Pi Imager** : https://www.raspberrypi.com/software/
-- Appareil : **Raspberry Pi 5**
-- OS : **Raspberry Pi OS Lite (64 bit)**  ← version Lite uniquement
-- Activer SSH avec authentification par mot de passe
-- Utilisateur : `pi` / Mot de passe : `raspberry`
-- Laisser le WiFi vide, désactiver Raspberry Pi Connect
-- Écrire la carte, connecter l'écran tactile, la souris USB, la carte son USB et le Pluto, puis démarrer le Pi
+- Download and run **Raspberry Pi Imager**: https://www.raspberrypi.com/software/
+- Device: **Raspberry Pi 5**
+- OS: **Raspberry Pi OS Lite (64 bit)** — Lite version only
+- Enable SSH with password authentication
+- Username: `pi` / Password: `raspberry`
+- Leave WiFi blank, disable Raspberry Pi Connect
+- Write the card, connect the touchscreen, USB mouse, USB sound card and Pluto, then power on the Pi
 
-## 2. Se connecter en SSH
+## 2. Connect via SSH
 
-Trouver l'adresse IP du Pi (via votre routeur ou un scanner IP), puis :
+Find the Pi's IP address (via your router or an IP scanner), then:
 
 ```bash
-ssh pi@<adresse-ip>
-# mot de passe : raspberry
+ssh pi@<ip-address>
+# password: raspberry
 ```
 
-## 3. Lancer l'installation
+## 3. Run the installer
 
-Copier-coller ces trois lignes une par une :
+Paste these three lines one at a time:
 
 ```bash
 wget https://raw.githubusercontent.com/hb9tob/Langstone-V3/main/installPluto.sh
@@ -141,33 +141,41 @@ chmod +x installPluto.sh
 ./installPluto.sh
 ```
 
-Le script effectue automatiquement :
-- Mise à jour du système
-- Installation de GNU Radio et des dépendances
-- Compilation et installation de **libiio** (pilote Pluto)
-- Compilation et installation de **lgpio** (GPIO Raspberry Pi)
-- Compilation et installation de **gr-anr** (module GNU Radio pour la réduction de bruit NB1)
-- Optimisation GNU Radio : profil VOLK (SIMD) + gouverneur CPU `performance`
-- Téléchargement et compilation de **Langstone-V3 fork HB9TOB**
-- Configuration du démarrage automatique
+The script automatically performs:
+- System update
+- GNU Radio and dependency installation
+- Build and install **libiio** (Pluto driver)
+- Build and install **lgpio** (Raspberry Pi GPIO)
+- Build and install **gr-anr** (GNU Radio spectral noise reduction module)
+- GNU Radio optimisation: VOLK SIMD profile + `performance` CPU governor
+- Download and build **Langstone-V3 HB9TOB fork**
+- Autostart configuration
 
-L'installation dure environ 20–30 minutes sans intervention. Le Pi redémarre automatiquement à la fin et lance le transceiver.
+The install takes approximately 20–30 minutes with no user input required. The Pi reboots automatically at the end and launches the transceiver.
 
-## 4. Première mise en route
+## 4. First startup
 
-Au premier démarrage, les paramètres de sécurité sont **tous désactivés par défaut** :
-- GPIO PTT → désactivé
-- CW Key → désactivé
-- Sortie RF Pluto → désactivée
-- Atténuation TX → maximum (−89 dB)
+At first boot, all safety parameters are **disabled by default**:
+- GPIO PTT → disabled
+- CW Key → disabled
+- Pluto RF output → disabled
+- TX attenuation → maximum (−89 dB)
 
-Vérifier le câblage et le matériel avant d'activer ces paramètres via **SET → (défiler jusqu'à Enable GPIO PTT / Enable CW Key / Enable Pluto TX)**.
+Verify your wiring and hardware before enabling these via **SET → (scroll to Enable GPIO PTT / Enable CW Key / Enable Pluto TX)**.
 
 ---
 
-# Modifications HB9TOB (fork)
+# HB9TOB Fork — Modifications
 
 This fork adds the following changes to the original Langstone-V3 project (Pluto version).
+
+## Startup fix — spurious GNU Radio restart
+
+The `run` startup script launches `Lang_TRX_Pluto.py` before starting `GUI_Pluto`. The GUI was also calling `startGNURadio()` internally, creating a second instance that immediately failed to open the audio device (already in use). This caused the FFT timeout to fire and triggered a spurious restart every time the system started.
+
+Two fixes were applied in `LangstoneGUI_Pluto.c`:
+- `startGNURadio()` now checks whether `Lang_TRX_Pluto.py` is already running and skips the launch if so.
+- `startGNURadio()` is called after `initPluto()` to avoid simultaneous IIO connections competing for the Pluto.
 
 ## Touchscreen D-Pad
 
@@ -285,19 +293,19 @@ The NB1 and COMP parameter menus are cross-navigable via the **COMP>** / **NB1>*
 Log into the Pi using SSH, then:
 
 ```bash
-cd ~/Langstone
-git fetch https://github.com/hb9tob/Langstone-V3.git main:hb9tob/main
-git checkout hb9tob/main -- Lang_TRX_Pluto.py LangstoneGUI_Pluto.c
-./build
+cd ~/git/Langstone-V3
+git pull
+cp LangstoneGUI_Pluto.c ~/Langstone/
+cc ~/Langstone/LangstoneGUI_Pluto.c -o ~/Langstone/GUI_Pluto -liio -llgpio
 ```
 
 To roll back to a specific tagged version (e.g. after a bad update):
 
 ```bash
-cd ~/Langstone
-git fetch https://github.com/hb9tob/Langstone-V3.git --tags
+cd ~/git/Langstone-V3
 git checkout <tag-name> -- Lang_TRX_Pluto.py LangstoneGUI_Pluto.c
-./build
+cp LangstoneGUI_Pluto.c ~/Langstone/
+cc ~/Langstone/LangstoneGUI_Pluto.c -o ~/Langstone/GUI_Pluto -liio -llgpio
 ```
 
 Available tags: `v-ssb-audio-improve`, `v-ssb-3band-eq`
