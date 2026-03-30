@@ -401,17 +401,16 @@ int main(int argc, char* argv[])
   strcat(plutoip,penv);
 
   printf("plutoip = %s\n",plutoip);
-  
-  startGNURadio();
-   
+
   initUDP();
-  
-  
+
+
   lastClock=0;
   readConfig();
   setRotation(screenrotate);
   detectHw();
   initPluto();
+  startGNURadio();       //start GNU Radio after Pluto is initialised to avoid IIO contention
   initFifos();
   initScreen();
   initGPIO();
@@ -4529,7 +4528,7 @@ return 0;
 void startGNURadio(void)
 {
    printf("Starting GNU Radio\n");
-   FFTTimeout = FFTTIMEOUT * 5;                                //allow time to start
+   FFTTimeout = FFTTIMEOUT * 10;                               //allow time to start (20 seconds)
    system("python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
 }
 
