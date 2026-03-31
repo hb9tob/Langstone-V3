@@ -21,28 +21,41 @@ if !(ps -ax |grep -v grep| grep -q Lang_TRX_Pluto.py) then
    sudo amixer -c 2 cset numid=8 50%  > /dev/null 2>&1
    $HOME/Langstone/Screen_Message "Langstone Loading" "Checking Pluto"
    
+   # Wait for first ping response (max 30 seconds)
    retry=0
-   until [ ${retry} -ge 4 ]
+   until [ ${retry} -ge 30 ]
    do
-      (ping -c1 $PLUTO_IP 2>/dev/null |grep -q received) && break
+      (ping -c1 -W1 $PLUTO_IP 2>/dev/null |grep -q received) && break
        retry=$[${retry}+1]
        sleep 1
    done
 
    #Check if Pluto failed to respond
 
-   if [ ${retry} -ge 4 ]; then
+   if [ ${retry} -ge 30 ]; then
       clear
       $HOME/Langstone/Screen_Message "Pluto Failed to Respond" "Check Power" "And Connections"
       sleep 5
       exit 0
    fi
 
-   # Check if Pluto was rebooting and was slow to respond
-
-   if [ ${retry} -ge 1 ]; then
-      sleep 5
-   fi
+   # Wait for Pluto to be fully stable (10 consecutive pings).
+   # The Pluto resets its USB interface ~110s after power-on while loading
+   # the FPGA bitfile and AD9361 firmware. Pings fail during this reset.
+   # Only start GNU Radio once the Pluto has been stable for 10 seconds.
+   $HOME/Langstone/Screen_Message "Langstone Loading" "Waiting for Pluto..."
+   stable=0
+   waited=0
+   while [ ${stable} -lt 10 ] && [ ${waited} -lt 150 ]
+   do
+      if ping -c1 -W1 $PLUTO_IP > /dev/null 2>&1; then
+         stable=$((stable + 1))
+      else
+         stable=0
+      fi
+      waited=$((waited + 1))
+      sleep 1
+   done
 
    $HOME/Langstone/Screen_Message "Langstone Loading"
 
