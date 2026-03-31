@@ -535,8 +535,17 @@ int main(int argc, char* argv[])
    
    if(firstpass==1)
    {
-   setTx(1);                                              //seems to be needed to initialise Pluto
-   setTx(0);
+   // Initialise Pluto RF chain without triggering the TX path (brief TX pulses damage power amplifiers)
+   // RX LO was already powered down in initPluto(); just bring it back up and set frequencies.
+   PlutoTxEnable(0);                  //ensure TX LO is off
+   PlutoRxEnable(1);                  //re-enable RX LO
+   setHwTxFreq(freq+10.0);           //offset TX freq to suppress spurious
+   setHwRxFreq(freq);                 //set initial RX frequency
+   sendFifo("R");                     //ensure GNU Radio is in RX mode
+   setMute(0);                        //unmute audio
+   setBandBits(bandBitsRx[band]);     //set band outputs for RX
+   plutoGpo=plutoGpo & 0xEF;
+   setPlutoGpo(plutoGpo);             //clear TX GPO pin
    firstpass=0;
    }
    
@@ -2877,13 +2886,10 @@ void setTx(int pt)
 {
   if((pt==1)&&(transmitting==0))
     {
-    if(firstpass == 0)                                      //don't set the Output pins if we are still initialising
-        { 
-         setTxPin(1);
-         setBandBits(bandBitsTx[band]);
-         plutoGpo=plutoGpo | 0x10;
-         setPlutoGpo(plutoGpo);                               //set the Pluto GPO Pin 
-        } 
+      setTxPin(1);
+      setBandBits(bandBitsTx[band]);
+      plutoGpo=plutoGpo | 0x10;
+      setPlutoGpo(plutoGpo);                               //set the Pluto GPO Pin 
       usleep(TXDELAY);
       setHwTxFreq(freq);
       if((mode==FM)&&(bandDuplex[band]==1))
@@ -2896,11 +2902,8 @@ void setTx(int pt)
       if(satMode()==0)
       {
         sMeter=0;
-        if(firstpass==0)                     //skip during firstpass: RX LO already powered down by initPluto()
-        {
-          setHwRxFreq(freq+10.0);            //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!)
-          PlutoRxEnable(0);
-        }
+        setHwRxFreq(freq+10.0);              //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!)
+        PlutoRxEnable(0);
       }
       if(satMode()==0)
       {
