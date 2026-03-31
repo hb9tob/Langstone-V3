@@ -160,10 +160,10 @@ int lastmode=0;
 char * modename[nummode]={"USB","LSB","CW ","CWN","FM ","AM "};
 enum {USB,LSB,CW,CWN,FM,AM};
 
-#define numSettings 26
+#define numSettings 27
 
-char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= "};
-enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX};
+char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= ", "Mic Capture= "};
+enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX,ALSA_CAPTURE};
 int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
@@ -317,8 +317,8 @@ int compMicGain=50;                         // 0-100 → GNU Radio gain 0.0-1.0 
 int alsaCaptureLevel=70;                    // 0-100 % for ALSA Mic Capture Volume
 
 int compSettingNo=0;
-#define numCOMPSettings 13
-char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= ","EQ1 Freq= ","EQ1 Gain= ","EQ2 Freq= ","EQ2 Gain= ","EQ3 Freq= ","EQ3 Gain= ","Mic Gain= ","Capture= "};
+#define numCOMPSettings 12
+char * compSettingText[numCOMPSettings]={"Attack= ","Decay= ","Ref= ","Max Gain= ","LPF Cut= ","EQ1 Freq= ","EQ1 Gain= ","EQ2 Freq= ","EQ2 Gain= ","EQ3 Freq= ","EQ3 Gain= ","Mic Gain= "};
 
 int tuneDigit=8;
 #define maxTuneDigit 11
@@ -1822,6 +1822,18 @@ void processMouse(int mbut)
          if(setIndex<0) setIndex=0;
          displaySetting(settingNo);
        }
+      else if(inputMode==NB1_SETTINGS)
+       {
+         nb1SettingNo--;
+         if(nb1SettingNo < 0) nb1SettingNo=numNB1Settings-1;
+         displayNB1Setting(nb1SettingNo);
+       }
+      else if(inputMode==COMP_SETTINGS)
+       {
+         compSettingNo--;
+         if(compSettingNo < 0) compSettingNo=numCOMPSettings-1;
+         displayCOMPSetting(compSettingNo);
+       }
       else
        {
         tuneDigit=tuneDigit-1;
@@ -1851,7 +1863,19 @@ void processMouse(int mbut)
          if(setIndex>maxSetIndex) setIndex=maxSetIndex;
          displaySetting(settingNo);
        }
-      else  
+      else if(inputMode==NB1_SETTINGS)
+       {
+         nb1SettingNo++;
+         if(nb1SettingNo==numNB1Settings) nb1SettingNo=0;
+         displayNB1Setting(nb1SettingNo);
+       }
+      else if(inputMode==COMP_SETTINGS)
+       {
+         compSettingNo++;
+         if(compSettingNo==numCOMPSettings) compSettingNo=0;
+         displayCOMPSetting(compSettingNo);
+       }
+      else
        {
          tuneDigit=tuneDigit+1;
          if(tuneDigit > maxTuneDigit) tuneDigit=maxTuneDigit;
@@ -3733,7 +3757,17 @@ if(settingNo==BAND_BITS_TX)        // Band Bits Tx
       mouseScroll=0;
       displaySetting(settingNo);
       }
-      
+
+  if(settingNo==ALSA_CAPTURE)           // ALSA Mic Capture Level (0→100 %)
+      {
+      alsaCaptureLevel += mouseScroll;
+      mouseScroll=0;
+      if(alsaCaptureLevel <   0) alsaCaptureLevel=  0;
+      if(alsaCaptureLevel > 100) alsaCaptureLevel=100;
+      setAlsaCapture(alsaCaptureLevel);
+      displaySetting(settingNo);
+      }
+
   if(settingNo==ROTATE)        // Rotate Screen
       {
       if(mouseScroll > 0)   screenrotate= 1;
@@ -3901,8 +3935,6 @@ void displayCOMPSetting(int se)
       { sprintf(valStr,"%+d.%d dB",compEq3Gain/10,abs(compEq3Gain%10)); displayStr(valStr); }
     if(se==11)
       { sprintf(valStr,"%d %%",compMicGain); displayStr(valStr); }
-    if(se==12)
-      { sprintf(valStr,"%d %%",alsaCaptureLevel); displayStr(valStr); }
   }
 
 
@@ -3921,7 +3953,6 @@ void sendCOMPParams(void)
     sprintf(cmd,"o%d",compEq3Freq);    sendFifo(cmd);
     sprintf(cmd,"q%d",compEq3Gain);    sendFifo(cmd);
     sprintf(cmd,"r%d",compMicGain);    sendFifo(cmd);
-    setAlsaCapture(alsaCaptureLevel);
     sendFifo("c2");    // apply: rebuild chain once if COMP active
   }
 
@@ -4022,14 +4053,6 @@ void changeCompSetting(void)
     mouseScroll=0;
     if(compMicGain <   0) compMicGain=  0;
     if(compMicGain > 100) compMicGain=100;
-    displayCOMPSetting(compSettingNo);
-    }
-  if(compSettingNo==12)       // ALSA Mic Capture Level (0→100 %)
-    {
-    alsaCaptureLevel += mouseScroll;
-    mouseScroll=0;
-    if(alsaCaptureLevel <   0) alsaCaptureLevel=  0;
-    if(alsaCaptureLevel > 100) alsaCaptureLevel=100;
     displayCOMPSetting(compSettingNo);
     }
 }
@@ -4315,7 +4338,13 @@ if(se==ENABLE_PLUTO_TX)
   {
     displayStr(enablePlutoTx ? "Enabled" : "Disabled");
   }
-    
+
+if(se==ALSA_CAPTURE)
+  {
+    sprintf(valStr,"%d %%",alsaCaptureLevel);
+    displayStr(valStr);
+  }
+
  if(se==ROTATE)
   {
     if(screenrotate == 0)
