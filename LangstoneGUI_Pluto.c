@@ -2896,8 +2896,11 @@ void setTx(int pt)
       if(satMode()==0)
       {
         sMeter=0;
-        setHwRxFreq(freq+10.0);              //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!)
-        PlutoRxEnable(0);
+        if(firstpass==0)                     //skip during firstpass: RX LO already powered down by initPluto()
+        {
+          setHwRxFreq(freq+10.0);            //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!)
+          PlutoRxEnable(0);
+        }
       }
       if(satMode()==0)
       {
