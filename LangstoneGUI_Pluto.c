@@ -536,9 +536,8 @@ int main(int argc, char* argv[])
    if(firstpass==1)
    {
    // Initialise Pluto RF chain without triggering the TX path (brief TX pulses damage power amplifiers)
-   // RX LO was already powered down in initPluto(); just bring it back up and set frequencies.
+   // RX LO already cycled in initPluto() before GNU Radio started — no IIO calls needed here.
    PlutoTxEnable(0);                  //ensure TX LO is off
-   PlutoRxEnable(1);                  //re-enable RX LO
    setHwTxFreq(freq+10.0);           //offset TX freq to suppress spurious
    setHwRxFreq(freq);                 //set initial RX frequency
    sendFifo("R");                     //ensure GNU Radio is in RX mode
@@ -1151,7 +1150,8 @@ void initPluto(void)
       else
       {
       plutophy = iio_context_find_device(plutoctx, "ad9361-phy");
-      PlutoRxEnable(0);      //power down RX LO before GNU Radio starts; setTx(0) in firstpass will re-enable it
+      PlutoRxEnable(0);      //cycle RX LO before GNU Radio starts (no IIO stream yet = executes immediately)
+      PlutoRxEnable(1);      //re-enable RX LO — both calls done before GNU Radio to avoid iiod queue delay
       }
 }
 
