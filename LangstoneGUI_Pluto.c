@@ -1141,7 +1141,8 @@ void initPluto(void)
       }
       else
       {
-      plutophy = iio_context_find_device(plutoctx, "ad9361-phy"); 
+      plutophy = iio_context_find_device(plutoctx, "ad9361-phy");
+      PlutoRxEnable(0);      //power down RX LO before GNU Radio starts; setTx(0) in firstpass will re-enable it
       }
 }
 
@@ -2895,11 +2896,8 @@ void setTx(int pt)
       if(satMode()==0)
       {
         sMeter=0;
-        if(firstpass==0)                       //skip RX disable during firstpass init to avoid disrupting GNU Radio IIO stream
-        {
-          setHwRxFreq(freq+10.0);              //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!)
-          PlutoRxEnable(0);
-        }
+        setHwRxFreq(freq+10.0);              //offset the Rx frequency to prevent unwanted mixing. (happens even if disabled!)
+        PlutoRxEnable(0);
       }
       if(satMode()==0)
       {
