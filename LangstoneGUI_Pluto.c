@@ -671,7 +671,7 @@ void drawQO100BandPlan(void)
             setForeColour(255, 255, 255);
             textSize = 1;
             gotoXY(FFTX + x0 + (x1 - x0) / 2 - 8, barY + 3);
-            displayStr(qo100bp[i].label);
+            displayStr((char *)qo100bp[i].label);
         }
     }
 }
