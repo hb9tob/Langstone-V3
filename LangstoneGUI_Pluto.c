@@ -621,6 +621,61 @@ int ret;
 }
 
 
+// QO-100 NB transponder downlink band plan (AMSAT-DL)
+static const struct {
+    double        start;        // downlink start (MHz)
+    double        end;          // downlink end (MHz)
+    unsigned char r, g, b;     // display colour
+    const char   *label;
+} qo100bp[] = {
+    { 10489.500, 10489.505, 255,   0,   0, "BCN" },  // Lower beacon
+    { 10489.505, 10489.540,   0, 200,   0, "CW"  },  // CW only
+    { 10489.540, 10489.580, 255, 140,   0, "DIG" },  // Digimodes 500 Hz max
+    { 10489.580, 10489.650, 255, 210,   0, "DIG" },  // Digimodes 2700 Hz max
+    { 10489.650, 10489.745,   0, 100, 255, "SSB" },  // SSB only
+    { 10489.745, 10489.755, 255,   0,   0, "BCN" },  // Middle beacon
+    { 10489.755, 10489.850,   0, 100, 255, "SSB" },  // SSB only
+    { 10489.850, 10489.858, 200,   0, 200, "BCT" },  // Broadcast 10489.855
+    { 10489.858, 10489.865, 255,   0, 128, "EMG" },  // Emergency 10489.860
+    { 10489.865, 10489.990, 255, 200,   0, "MIX" },  // Mixed modes & special
+    { 10489.990, 10489.997, 255,   0,   0, "BCN" },  // Multimedia beacon
+    { 10489.997, 10490.000, 255,   0,   0, "BCN" },  // Upper beacon
+};
+
+void drawQO100BandPlan(void)
+{
+    if (band != 11 || !satMode()) return;
+
+    int nseg = (int)(sizeof(qo100bp) / sizeof(qo100bp[0]));
+    int barY = FFTY + 20 + rows - 14;  // last 14 rows of waterfall
+    int barH = 14;
+
+    // thin grey separator at top of bar
+    for (int x = 0; x < points; x++)
+        setPixel(x + FFTX, barY, 150, 150, 150);
+
+    for (int i = 0; i < nseg; i++) {
+        int x0 = (int)((qo100bp[i].start - freq) * 1e6 / HzPerBin) + points / 2;
+        int x1 = (int)((qo100bp[i].end   - freq) * 1e6 / HzPerBin) + points / 2;
+
+        if (x0 < 0)      x0 = 0;
+        if (x1 > points) x1 = points;
+        if (x0 >= x1)    continue;
+
+        for (int y = 1; y < barH; y++)
+            for (int x = x0; x < x1; x++)
+                setPixel(x + FFTX, barY + y,
+                         qo100bp[i].r, qo100bp[i].g, qo100bp[i].b);
+
+        if (x1 - x0 > 18) {
+            setForeColour(255, 255, 255);
+            textSize = 1;
+            gotoXY(FFTX + x0 + (x1 - x0) / 2 - 8, barY + 3);
+            displayStr(qo100bp[i].label);
+        }
+    }
+}
+
 void waterfall()
 {
   int level,level2;
@@ -727,7 +782,9 @@ void waterfall()
             setPixel(p+FFTX,FFTY+20+r,palette[level*3+2],palette[level*3+1],palette[level*3]);
           }
         }
-    
+
+        drawQO100BandPlan();
+
         //clear spectrum area
         for(int r=0;r<spectrum_rows+1;r++)
         { 
