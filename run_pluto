@@ -44,6 +44,8 @@ if !(ps -ax |grep -v grep| grep -q Lang_TRX_Pluto.py) then
       sleep 5
    fi
 
+   $HOME/Langstone/Screen_Message "Langstone Loading" "Waiting for audio..."
+   sleep 45
    $HOME/Langstone/Screen_Message "Langstone Loading"
 
 # Start the GUI (which will also start the GNURadio module
