@@ -669,7 +669,10 @@ void drawQO100BandPlan(void)
                          qo100bp[i].r, qo100bp[i].g, qo100bp[i].b);
 
         if (x1 - x0 > 18) {
-            setForeColour(255, 255, 255);
+            // inverse text: black on light backgrounds, white on dark
+            int lum = qo100bp[i].r * 299 + qo100bp[i].g * 587 + qo100bp[i].b * 114;
+            if (lum > 128000) setForeColour(0, 0, 0);
+            else              setForeColour(255, 255, 255);
             textSize = 1;
             gotoXY(FFTX + x0 + (x1 - x0) / 2 - 8, barY + 3);
             displayStr((char *)qo100bp[i].label);
@@ -769,17 +772,18 @@ void waterfall()
         
         
     
-        //draw waterfall
-        for(int r=0;r<rows;r++)
-        {  
+        //draw waterfall (reserve last 14 rows for QO-100 band plan if needed)
+        int bp_rows = (freq >= 10489.490 && freq <= 10490.010) ? 14 : 0;
+        for(int r=0;r<rows - bp_rows;r++)
+        {
           for(int p=0;p<points;p++)
-          {                                                                                                           
+          {
             //limit values displayed to range specified
             if (buf[p][r]<baselevel) buf[p][r]=baselevel;
             if (buf[p][r]>fftref) buf[p][r]=fftref;
-    
+
             //scale to 0-255
-            level = (buf[p][r]-baselevel)*scaling;   
+            level = (buf[p][r]-baselevel)*scaling;
             setPixel(p+FFTX,FFTY+20+r,palette[level*3+2],palette[level*3+1],palette[level*3]);
           }
         }
