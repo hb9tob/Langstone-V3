@@ -177,6 +177,29 @@ Two fixes were applied in `LangstoneGUI_Pluto.c`:
 - `startGNURadio()` now checks whether `Lang_TRX_Pluto.py` is already running and skips the launch if so.
 - `startGNURadio()` is called after `initPluto()` to avoid simultaneous IIO connections competing for the Pluto.
 
+## Boot startup delay — audio stack
+
+On some systems, PulseAudio or PipeWire finishes initialising ~15–25 seconds after boot and briefly resets the audio device. If GNU Radio has already opened that device, the reset freezes the flowgraph and triggers the FFT timeout restart.
+
+A `sleep 15` has been added to `run_pluto` after the Pluto connectivity check and before launching the GUI. This ensures the audio stack is fully settled before GNU Radio claims the audio device. An occasional freeze at boot is still possible in rare cases; if that is unacceptable, increase the delay to 30–45 seconds.
+
+## QO-100 NB transponder band plan overlay
+
+When the displayed frequency is within the QO-100 NB transponder passband (10489.490–10490.010 MHz), the bottom 14 rows of the waterfall are replaced by a colour-coded bar showing the AMSAT-DL band plan:
+
+| Colour | Segment |
+|---|---|
+| Red | Beacons (lower 10489.500, middle 10489.750, multimedia 10489.993, upper 10490.000) |
+| Green | CW only (10489.505–10489.540) |
+| Dark orange | Digimodes 500 Hz max (10489.540–10489.580) |
+| Yellow | Digimodes 2700 Hz max (10489.580–10489.650) |
+| Blue | SSB only (10489.650–10489.745 and 10489.755–10489.850) |
+| Purple | Broadcast frequency 10489.855 MHz |
+| Pink | Emergency frequency 10489.860 MHz |
+| Yellow | Mixed modes & special purpose (10489.865–10489.990) |
+
+The bar scrolls with the VFO — only the segments currently visible in the waterfall window are shown. Each visible segment is labelled (BCN / CW / DIG / SSB / MIX / BCT / EMG) with automatically inverted text colour (black on light backgrounds, white on dark backgrounds) for readability.
+
 ## Touchscreen D-Pad
 
 Four arrow buttons (35×35px) arranged as a directional pad have been added to the left side of the screen, allowing full control without a mouse.
