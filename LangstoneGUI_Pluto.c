@@ -673,9 +673,12 @@ void drawQO100BandPlan(void)
             int lum = qo100bp[i].r * 299 + qo100bp[i].g * 587 + qo100bp[i].b * 114;
             if (lum > 128000) setForeColour(0, 0, 0);
             else              setForeColour(255, 255, 255);
+            // match back colour to segment so character "off" pixels don't appear black
+            setBackColour(qo100bp[i].r, qo100bp[i].g, qo100bp[i].b);
             textSize = 1;
             gotoXY(FFTX + x0 + (x1 - x0) / 2 - 8, barY + 3);
             displayStr((char *)qo100bp[i].label);
+            setBackColour(0, 0, 0);
         }
     }
 }
