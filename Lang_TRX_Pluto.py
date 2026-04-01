@@ -140,7 +140,6 @@ class Lang_TRX_Pluto(gr.top_block):
         self.blocks_vector_to_stream_0_0 = blocks.vector_to_stream(gr.sizeof_float*1, 512)
         self.blocks_vector_to_stream_0 = blocks.vector_to_stream(gr.sizeof_float*1, 512)
         self.blocks_mute_xx_0_0_0 = blocks.mute_cc(bool((not PTT) or (Tx_Mode==2 and not KEY) or (Tx_Mode==3 and not KEY)))
-        self.blocks_multiply_xx_0 = blocks.multiply_vcc(1)
         self.blocks_multiply_const_vxx_4 = blocks.multiply_const_cc((Tx_Mode < 4) or (Tx_Mode==5))
         self.blocks_multiply_const_vxx_3 = blocks.multiply_const_cc(Tx_Mode==4)
         self.blocks_multiply_const_vxx_2_1_0 = blocks.multiply_const_ff((1.0 + (Rx_Mode==5)))
@@ -198,11 +197,11 @@ class Lang_TRX_Pluto(gr.top_block):
                 100,
                 window.WIN_HAMMING,
                 6.76))
-        self.audio_source_0 = audio.source(48000, "hw:CARD=Device,DEV=0", False)
+        self.audio_source_0 = audio.source(48000, "hw:CARD=Device,DEV=0", True)
         self.audio_sink_0 = audio.sink(48000, "hw:CARD=Device,DEV=0", False)
         self.analog_sig_source_x_1_0 = analog.sig_source_f(48000, analog.GR_SIN_WAVE, (CTCSS/10.0), (0.15 * (CTCSS >0)), 0, 0)
         self.analog_sig_source_x_1 = analog.sig_source_f(48000, analog.GR_COS_WAVE, 1750, (1.0*ToneBurst), 0, 0)
-        self.analog_sig_source_x_0 = analog.sig_source_c(48000, analog.GR_COS_WAVE, 0, 1, 0, 0)
+
         self.analog_rail_ff_0_0 = analog.rail_ff((-0.99), 0.99)
         self.analog_rail_ff_0 = analog.rail_ff((-1), 1)
         self.analog_nbfm_tx_0 = analog.nbfm_tx(
@@ -232,7 +231,6 @@ class Lang_TRX_Pluto(gr.top_block):
         self.connect((self.analog_nbfm_tx_0, 0), (self.blocks_multiply_const_vxx_3, 0))
         self.connect((self.analog_rail_ff_0, 0), (self.band_pass_filter_1, 0))
         self.connect((self.analog_rail_ff_0_0, 0), (self.blocks_float_to_complex_0_0, 0))
-        self.connect((self.analog_sig_source_x_0, 0), (self.blocks_multiply_xx_0, 1))
         self.connect((self.analog_sig_source_x_1, 0), (self.blocks_add_xx_0, 0))
         self.connect((self.analog_sig_source_x_1_0, 0), (self.blocks_add_xx_0_0, 0))
         self.connect((self.audio_source_0, 0), (self.blocks_multiply_const_vxx_0, 0))
@@ -252,7 +250,7 @@ class Lang_TRX_Pluto(gr.top_block):
         self.connect((self.blocks_complex_to_real_0, 0), (self.blocks_multiply_const_vxx_2, 0))
         self.connect((self.blocks_complex_to_real_0_0, 0), (self.blocks_multiply_const_vxx_2_1_0, 0))
         self.connect((self.blocks_float_to_complex_0, 0), (self.analog_agc3_xx_0, 0))
-        self.connect((self.blocks_float_to_complex_0_0, 0), (self.blocks_multiply_xx_0, 0))
+        self.connect((self.blocks_float_to_complex_0_0, 0), (self.band_pass_filter_0_0, 0))
         self.connect((self.blocks_keep_one_in_n_0, 0), (self.logpwrfft_x_0, 0))
         self.connect((self.blocks_keep_one_in_n_0_0, 0), (self.logpwrfft_x_0_0, 0))
         self.connect((self.blocks_multiply_const_vxx_0, 0), (self.blocks_add_const_vxx_0_0, 0))
@@ -264,7 +262,6 @@ class Lang_TRX_Pluto(gr.top_block):
         self.connect((self.blocks_multiply_const_vxx_2_1_0, 0), (self.blocks_add_xx_1, 0))
         self.connect((self.blocks_multiply_const_vxx_3, 0), (self.blocks_add_xx_2, 0))
         self.connect((self.blocks_multiply_const_vxx_4, 0), (self.blocks_add_xx_2, 1))
-        self.connect((self.blocks_multiply_xx_0, 0), (self.band_pass_filter_0_0, 0))
         self.connect((self.blocks_mute_xx_0_0_0, 0), (self.blocks_keep_one_in_n_0_0, 0))
         self.connect((self.blocks_mute_xx_0_0_0, 0), (self.rational_resampler_xxx_0, 0))
         self.connect((self.blocks_vector_to_stream_0, 0), (self.network_udp_sink_0, 0))
