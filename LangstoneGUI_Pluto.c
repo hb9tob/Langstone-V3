@@ -644,7 +644,8 @@ static const struct {
 
 void drawQO100BandPlan(void)
 {
-    if (band != 11 || !satMode()) return;
+    // Show band plan whenever tuned in the QO-100 NB passband (10489.490–10490.010 MHz)
+    if (freq < 10489.490 || freq > 10490.010) return;
 
     int nseg = (int)(sizeof(qo100bp) / sizeof(qo100bp[0]));
     int barY = FFTY + 20 + rows - 14;  // last 14 rows of waterfall
