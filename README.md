@@ -177,11 +177,13 @@ Two fixes were applied in `LangstoneGUI_Pluto.c`:
 - `startGNURadio()` now checks whether `Lang_TRX_Pluto.py` is already running and skips the launch if so.
 - `startGNURadio()` is called after `initPluto()` to avoid simultaneous IIO connections competing for the Pluto.
 
-## Boot startup delay — audio stack
+## Boot startup sequence
 
-On some systems, PulseAudio or PipeWire finishes initialising ~15–25 seconds after boot and briefly resets the audio device. If GNU Radio has already opened that device, the reset freezes the flowgraph and triggers the FFT timeout restart.
+Several improvements have been made to `run_pluto` to ensure a reliable startup:
 
-A `sleep 15` has been added to `run_pluto` after the Pluto connectivity check and before launching the GUI. This ensures the audio stack is fully settled before GNU Radio claims the audio device. An occasional freeze at boot is still possible in rare cases; if that is unacceptable, increase the delay to 30–45 seconds.
+- **Pluto reboot at startup**: the Pluto is rebooted via SSH at the beginning of each session, ensuring a clean hardware state. The script waits up to 30 seconds for the Pluto to come back (ping), then waits a further 15 seconds for the USB audio device to settle before launching the GUI.
+- **Kernel message suppression**: `kernel.printk` is set to level 1 at startup so that kernel driver messages (e.g. USB enumeration) no longer appear on the framebuffer display.
+- **ALSA mic capture reset**: the Sound Blaster Play! 3 mic capture gain is forced to 0% before the GUI starts, preventing any accidental TX audio burst. The GUI restores the configured level from the config file during initialisation.
 
 ## QO-100 NB transponder band plan overlay
 
@@ -199,6 +201,8 @@ When the displayed frequency is within the QO-100 NB transponder passband (10489
 | Yellow | Mixed modes & special purpose (10489.865–10489.990) |
 
 The bar scrolls with the VFO — only the segments currently visible in the waterfall window are shown. Each visible segment is labelled (BCN / CW / DIG / SSB / MIX / BCT / EMG) with automatically inverted text colour (black on light backgrounds, white on dark backgrounds) for readability.
+
+The bar is redrawn only when the VFO frequency changes (not on every waterfall frame) to avoid flickering. When the frequency moves outside the QO-100 passband, the bar area is cleared cleanly.
 
 ## Touchscreen D-Pad
 
@@ -225,6 +229,27 @@ The FFT decimation block had no anti-aliasing filter, causing spectral aliasing 
 ```
 cutoff = 48000 / 2^(FFT_SEL+1) × 0.9
 ```
+
+## FFT waterfall display range
+
+Two parameters in the **SET** menu control the waterfall and spectrum display levels:
+
+| Parameter | Description |
+|---|---|
+| FFT Ref | Top of the display scale (dBm). Default −10 dBm. Range −80 to +30 dBm. |
+| FFT Range | Dynamic range shown (dB). Default 80 dB. Range 10 to 120 dB. |
+
+The bottom of the display is `FFT Ref − FFT Range`. Both values are stored per band.
+
+## TX attenuation at startup
+
+The Pluto `fmcomms2_sink` (GNU Radio IIO TX block) resets the AD9361 TX hardware gain to its default value when it initialises, overriding any value previously set by the GUI. To compensate, the TX attenuation (`TxAtt`) is re-applied by the GUI on the first received FFT frame — which confirms GNU Radio is fully running and the IIO TX chain is initialised. The same mechanism applies after a watchdog restart of GNU Radio.
+
+## NB1/COMP state restoration after GNU Radio restart
+
+When the GNU Radio watchdog restarts the flowgraph, the NB1 and COMP parameters and activation states are now fully re-sent to the new GNU Radio instance:
+- All NB1 parameters are re-sent, and NB1 is re-activated if it was active.
+- All COMP parameters are re-sent, and COMP is re-activated if it was active.
 
 ## TX safety defaults
 
@@ -316,22 +341,14 @@ The NB1 and COMP parameter menus are cross-navigable via the **COMP>** / **NB1>*
 Log into the Pi using SSH, then:
 
 ```bash
-cd ~/git/Langstone-V3
-git pull
-cp LangstoneGUI_Pluto.c ~/Langstone/
-cc ~/Langstone/LangstoneGUI_Pluto.c -o ~/Langstone/GUI_Pluto -liio -llgpio
+cd ~/Langstone && git pull && cc LangstoneGUI_Pluto.c -o GUI_Pluto -liio -llgpio
 ```
 
-To roll back to a specific tagged version (e.g. after a bad update):
+If only `run_pluto` or `Lang_TRX_Pluto.py` changed (no C recompile needed):
 
 ```bash
-cd ~/git/Langstone-V3
-git checkout <tag-name> -- Lang_TRX_Pluto.py LangstoneGUI_Pluto.c
-cp LangstoneGUI_Pluto.c ~/Langstone/
-cc ~/Langstone/LangstoneGUI_Pluto.c -o ~/Langstone/GUI_Pluto -liio -llgpio
+cd ~/Langstone && git pull
 ```
-
-Available tags: `v-ssb-audio-improve`, `v-ssb-3band-eq`
 
 ---
 
