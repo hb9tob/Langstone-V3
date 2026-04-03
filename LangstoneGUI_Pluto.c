@@ -123,6 +123,7 @@ void displayArrowButtons(void);
 int arrowButtonTouched(int bx, int by);
 
 int firstpass=1;
+int txAttApplied=0;   // re-apply TxAtt once GNU Radio is running (fmcomms2_sink resets it on init)
 double freq;
 double freqInc=0.001;
 #define numband 24
@@ -722,7 +723,8 @@ void waterfall()
       if(ret>0)
     {
        FFTTimeout = FFTTIMEOUT;
-    
+       if(!txAttApplied) { setPlutoTxAtt(TxAtt); txAttApplied=1; }  // re-apply after fmcomms2_sink init
+
         //shift buffer
         for(int r=rows-1;r>0;r--)
         {  
@@ -4709,6 +4711,7 @@ void restartGNURadio(void)
    setBandBits(0);
    sendFifo("H0");        //unlock the flowgraph so that it can exit
    sendFifo("Q");       //kill the SDR
+   txAttApplied=0;                                             //re-apply TxAtt after fmcomms2_sink re-init
    FFTTimeout = FFTTIMEOUT * 5;                                //allow time to restart
    displayError("Restarting GNURadio");
    sleep(2);
