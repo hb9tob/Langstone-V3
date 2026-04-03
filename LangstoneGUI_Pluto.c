@@ -296,26 +296,26 @@ int enableGPIOPTT=0;    // GPIO 17 PTT enabled (0=disabled, 1=enabled)
 int enableCWKey=0;      // CW key enabled (0=disabled, 1=enabled)
 int enablePlutoTx=0;    // Pluto TX output enabled (0=disabled, 1=enabled)
 int nb1Active=0;        // NB1 spectral noise reduction active
-int nb1Algorithm=0;     // 0=Wiener 1=Over-subtract 2=MMSE
-int nb1FftSize=256;     // 64/128/256/512/1024
+int nb1Algorithm=1;     // 0=Wiener 1=Over-subtract 2=MMSE
+int nb1FftSize=512;     // 64/128/256/512/1024
 int nb1Overlap=4;       // 2/4/8/16
 int nb1Alpha=98;        // ×100 → 0.98
 int nb1Beta=20;         // ×10  → 2.0
-int nb1GainFloor=10;    // ×1000 → 0.010
+int nb1GainFloor=14;    // ×1000 → 0.014
 int nb1SettingNo=0;
 #define numNB1Settings 6
 char * nb1SettingText[numNB1Settings]={"Algorithm= ","FFT Size= ","Overlap= ","Alpha= ","Beta= ","Gain Floor= "};
 
 int compActive=0;         // TX compressor active
-int compAgcAttack=41;     // ×1000 → 0.041
-int compAgcDecay=33;      // ×1000 → 0.033
-int compAgcRef=90;        // ×100  → 0.90
+int compAgcAttack=353;    // ×1000 → 0.353
+int compAgcDecay=200;     // ×1000 → 0.200
+int compAgcRef=86;        // ×100  → 0.86
 int compAgcMax=100;       // integer → 100.0
 int compLpfCutoff=2700;   // Hz
-int compEq1Freq=500;  int compEq1Gain=0;    // EQ band 1: ×10 dB → 0.0 dB
-int compEq2Freq=1200; int compEq2Gain=40;   // EQ band 2: ×10 dB → +4.0 dB
+int compEq1Freq=450;  int compEq1Gain=-60;  // EQ band 1: ×10 dB → -6.0 dB
+int compEq2Freq=1200; int compEq2Gain=46;   // EQ band 2: ×10 dB → +4.6 dB
 int compEq3Freq=2500; int compEq3Gain=60;   // EQ band 3: ×10 dB → +6.0 dB
-int compMicGain=50;                         // 0-100 → GNU Radio gain 0.0-1.0 when COMP active
+int compMicGain=90;                         // 0-100 → GNU Radio gain 0.0-1.0 when COMP active
 int alsaCaptureLevel=70;                    // 0-100 % for ALSA Mic Capture Volume
 
 int compSettingNo=0;
