@@ -19,6 +19,7 @@ mkfifo /tmp/langstoneTRx
 if !(ps -ax |grep -v grep| grep -q Lang_TRX_Pluto.py) then
    sudo amixer -c 2  cset numid=6 100%  > /dev/null 2>&1
    sudo amixer -c 2 cset numid=8 50%  > /dev/null 2>&1
+   amixer -c 1 cset numid=4 0% > /dev/null 2>&1
    $HOME/Langstone/Screen_Message "Langstone Loading" "Checking Pluto"
    
    retry=0

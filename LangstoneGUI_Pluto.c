@@ -4681,9 +4681,13 @@ void restartGNURadio(void)
    FFTTimeout = FFTTIMEOUT * 5;                                //allow time to restart
    displayError("Restarting GNURadio");
    sleep(2);
-   startGNURadio();  
+   startGNURadio();
    sleep(2);
    initSDR();
+   sendNB1Params();
+   if(nb1Active) sendFifo("N1");
+   sendCOMPParams();
+   if(compActive) sendFifo("c1");
 }
 
 FILE *openFile(char *fn, char *mode)
