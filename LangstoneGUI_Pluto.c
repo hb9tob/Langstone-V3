@@ -1799,11 +1799,13 @@ popupSel=MODE;
 
 void displayPopupBand(void)
 {
+int maxn=numband-popupFirstBand;
+if(maxn>6) maxn=6;
 clearPopUp();
 gotoXY(popupX,popupY);
   setForeColour(0,255,0);
  displayButton("More..");
-  for(int n=0;n<6;n++)
+  for(int n=0;n<maxn;n++)
   {
     displayButton(bandName[n+popupFirstBand]);
   }
@@ -2467,11 +2469,15 @@ if(popupSel==BAND)
   
   for(int n=1;n<7;n++)
   {
-     if(buttonTouched(popupX+(n*buttonSpaceX),popupY))                                
+     if(buttonTouched(popupX+(n*buttonSpaceX),popupY))
        {
-       band=n-1+popupFirstBand;
-       setBand(band);
-       clearPopUp();
+       int b=n-1+popupFirstBand;
+       if(b < numband)
+         {
+         band=b;
+         setBand(band);
+         clearPopUp();
+         }
        }
   }
 
