@@ -163,8 +163,8 @@ enum {USB,LSB,CW,CWN,FM,AM};
 
 #define numSettings 28
 
-char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= ", "Mic Capture= ", "FFT Range= "};
-enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX,ALSA_CAPTURE,FFT_RANGE};
+char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","FFT Range= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= ", "Mic Capture= "};
+enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,FFT_RANGE,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX,ALSA_CAPTURE};
 int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
