@@ -21,10 +21,16 @@ if !(ps -ax |grep -v grep| grep -q Lang_TRX_Pluto.py) then
    sudo amixer -c 2 cset numid=8 50%  > /dev/null 2>&1
    amixer -c 1 cset numid=4 0% > /dev/null 2>&1
    echo 1 | sudo tee /proc/sys/kernel/printk > /dev/null   # suppress kernel messages on framebuffer
-   $HOME/Langstone/Screen_Message "Langstone Loading" "Checking Pluto"
-   
+   # Reboot Pluto to ensure clean state at startup
+   $HOME/Langstone/Screen_Message "Langstone Loading" "Rebooting Pluto..."
+   ssh-keygen -f "$HOME/.ssh/known_hosts" -R $PLUTO_IP >/dev/null 2>&1
+   timeout 2 sshpass -p analog ssh -o StrictHostKeyChecking=no root@$PLUTO_IP 'PATH=/bin:/sbin:/usr/bin;reboot' >/dev/null 2>&1
+   sleep 5
+
+   # Wait for Pluto to come back (reboot takes ~20s, so allow up to 30 retries)
+   $HOME/Langstone/Screen_Message "Langstone Loading" "Waiting for Pluto..."
    retry=0
-   until [ ${retry} -ge 4 ]
+   until [ ${retry} -ge 30 ]
    do
       (ping -c1 $PLUTO_IP 2>/dev/null |grep -q received) && break
        retry=$[${retry}+1]
@@ -33,17 +39,11 @@ if !(ps -ax |grep -v grep| grep -q Lang_TRX_Pluto.py) then
 
    #Check if Pluto failed to respond
 
-   if [ ${retry} -ge 4 ]; then
+   if [ ${retry} -ge 30 ]; then
       clear
       $HOME/Langstone/Screen_Message "Pluto Failed to Respond" "Check Power" "And Connections"
       sleep 5
       exit 0
-   fi
-
-   # Check if Pluto was rebooting and was slow to respond
-
-   if [ ${retry} -ge 1 ]; then
-      sleep 5
    fi
 
    $HOME/Langstone/Screen_Message "Langstone Loading" "Waiting for audio..."
