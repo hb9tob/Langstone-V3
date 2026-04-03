@@ -644,12 +644,17 @@ static const struct {
 
 void drawQO100BandPlan(void)
 {
-    // Show band plan whenever tuned in the QO-100 NB passband (10489.490–10490.010 MHz)
-    if (freq < 10489.490 || freq > 10490.010) return;
-
     int nseg = (int)(sizeof(qo100bp) / sizeof(qo100bp[0]));
     int barY = FFTY + 20 + rows - 14;  // last 14 rows of waterfall
     int barH = 14;
+
+    // Always clear bar first so it disappears when leaving the QO-100 range
+    for (int y = 0; y < barH; y++)
+        for (int x = 0; x < points; x++)
+            setPixel(x + FFTX, barY + y, 0, 0, 0);
+
+    // Show band plan only when tuned in the QO-100 NB passband (10489.490–10490.010 MHz)
+    if (freq < 10489.490 || freq > 10490.010) return;
 
     // thin grey separator at top of bar
     for (int x = 0; x < points; x++)
