@@ -139,6 +139,7 @@ int bandBitsRx[numband]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21
 int bandBitsTx[numband]={0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23};
 int bandSquelch[numband][nummode]={0};
 int bandFFTRef[numband]={-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10,-10};
+int bandFFTRange[numband]={80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80,80};
 int bandTxAtt[numband]={-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89,-89};
 int bandRxGain[numband]={100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100,100};              //100 is automatic gain
 int bandDuplex[numband]={0};
@@ -160,10 +161,10 @@ int lastmode=0;
 char * modename[nummode]={"USB","LSB","CW ","CWN","FM ","AM "};
 enum {USB,LSB,CW,CWN,FM,AM};
 
-#define numSettings 27
+#define numSettings 28
 
-char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= ", "Mic Capture= "};
-enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX,ALSA_CAPTURE};
+char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= ", "Mic Capture= ", "FFT Range= "};
+enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX,ALSA_CAPTURE,FFT_RANGE};
 int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
@@ -371,6 +372,7 @@ float buf[512][130];
 int points=512;
 int rows=130;
 int FFTRef = -30;
+int FFTRange = 80;
 int spectrum_rows=80;
 unsigned char * palette;
 int HzPerBin=94;                        //calculated from FFT width and number of samples. Width=48000 number of samples =512
@@ -781,7 +783,7 @@ void waterfall()
         //RF level adjustment
     
  
-        baselevel=fftref-80;
+        baselevel=fftref-FFTRange;
         scaling = 255.0/(float)(fftref-baselevel);
         
         
@@ -2547,6 +2549,7 @@ void setBand(int b)
   setSquelch(squelch);
   setCTCSS(bandCTCSS[band]);
   FFTRef=bandFFTRef[band];
+  FFTRange=bandFFTRange[band];
   TxAtt=bandTxAtt[band];
   setPlutoTxAtt(TxAtt);
   setPlutoRxGain(bandRxGain[band]);
@@ -3710,8 +3713,17 @@ if(settingNo==BAND_BITS_TX)        // Band Bits Tx
       if(FFTRef<-80) FFTRef=-80;
       if(FFTRef>30) FFTRef=30;
       bandFFTRef[band]=FFTRef;
-      displaySetting(settingNo);  
-      }    
+      displaySetting(settingNo);
+      }
+   if(settingNo==FFT_RANGE)     // FFT Dynamic Range (dB)
+      {
+      FFTRange=FFTRange+mouseScroll;
+      mouseScroll=0;
+      if(FFTRange<10)  FFTRange=10;
+      if(FFTRange>120) FFTRange=120;
+      bandFFTRange[band]=FFTRange;
+      displaySetting(settingNo);
+      }
     if(settingNo==TX_ATT)        // Tx Attenuator
       {
       TxAtt=TxAtt+mouseScroll;
@@ -4307,7 +4319,12 @@ if(se==BAND_BITS_TX)
   } 
   if(se==FFT_REF)
   {
-  sprintf(valStr,"%d",FFTRef);
+  sprintf(valStr,"%d dB",FFTRef);
+  displayStr(valStr);
+  }
+  if(se==FFT_RANGE)
+  {
+  sprintf(valStr,"%d dB",FFTRange);
   displayStr(valStr);
   }
   if(se==TX_ATT)
@@ -4501,7 +4518,9 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     sprintf(vname,"bandTxBits%02d",b);
     if(strstr(variable,vname)) sscanf(value,"%d",&bandBitsTx[b]);    
     sprintf(vname,"bandFFTRef%02d",b);
-    if(strstr(variable,vname)) sscanf(value,"%d",&bandFFTRef[b]);     
+    if(strstr(variable,vname)) sscanf(value,"%d",&bandFFTRef[b]);
+    sprintf(vname,"bandFFTRange%02d",b);
+    if(strstr(variable,vname)) sscanf(value,"%d",&bandFFTRange[b]);     
     sprintf(vname,"bandSquelchUSB%02d",b);
     if(strstr(variable,vname)) sscanf(value,"%d",&bandSquelch[b][USB]);
     sprintf(vname,"bandSquelchLSB%02d",b);
@@ -4613,6 +4632,7 @@ for(int b=0;b<numband;b++)
   fprintf(conffile,"bandRxBits%02d %d\n",b,bandBitsRx[b]);
   fprintf(conffile,"bandTxBits%02d %d\n",b,bandBitsTx[b]);
   fprintf(conffile,"bandFFTRef%02d %d\n",b,bandFFTRef[b]);
+  fprintf(conffile,"bandFFTRange%02d %d\n",b,bandFFTRange[b]);
   fprintf(conffile,"bandSquelchUSB%02d %d\n",b,bandSquelch[b][USB]);
   fprintf(conffile,"bandSquelchLSB%02d %d\n",b,bandSquelch[b][LSB]);
   fprintf(conffile,"bandSquelchCW%02d %d\n",b,bandSquelch[b][CW]);
