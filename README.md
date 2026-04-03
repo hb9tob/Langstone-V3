@@ -245,11 +245,30 @@ The bottom of the display is `FFT Ref − FFT Range`. Both values are stored per
 
 The Pluto `fmcomms2_sink` (GNU Radio IIO TX block) resets the AD9361 TX hardware gain to its default value when it initialises, overriding any value previously set by the GUI. To compensate, the TX attenuation (`TxAtt`) is re-applied by the GUI on the first received FFT frame — which confirms GNU Radio is fully running and the IIO TX chain is initialised. The same mechanism applies after a watchdog restart of GNU Radio.
 
-## NB1/COMP state restoration after GNU Radio restart
+## NB1/COMP state persistence
 
-When the GNU Radio watchdog restarts the flowgraph, the NB1 and COMP parameters and activation states are now fully re-sent to the new GNU Radio instance:
+The NB1 and COMP **active states** are saved to the config file and restored at each startup. If NB1 or COMP was enabled when the transceiver was shut down, it will be re-enabled automatically at next boot.
+
+When the GNU Radio watchdog restarts the flowgraph, the NB1 and COMP parameters and activation states are also fully re-sent to the new GNU Radio instance:
 - All NB1 parameters are re-sent, and NB1 is re-activated if it was active.
 - All COMP parameters are re-sent, and COMP is re-activated if it was active.
+
+## QO-100 band (band 25)
+
+A dedicated **QO100** band (index 24) has been added to the band list. Its default parameters are taken from the HB9TOB Pi configuration for the QO-100 NB transponder:
+
+| Parameter | Value |
+|---|---|
+| Frequency | 10489.55 MHz |
+| TX offset | −8089.5 MHz |
+| RX offset | −9750.0003 MHz |
+| FFT Ref | −27 dBm |
+| FFT Range | 30 dB |
+| TX attenuation | −89 dB (safety — set to your operating value before transmitting) |
+
+To access this band, **24 Bands** must be enabled in the SET menu (`24 Bands = 1`). Then press **BAND** and cycle through the pages with **More..** until the **QO100** button appears (5th page).
+
+The band popup now shows readable names for all 25 bands (e.g. "70", "144", "432", "QO100") instead of the raw MHz value.
 
 ## TX safety defaults
 
