@@ -723,7 +723,14 @@ void waterfall()
       if(ret>0)
     {
        FFTTimeout = FFTTIMEOUT;
-       if(!txAttApplied) { setPlutoTxAtt(TxAtt); txAttApplied=1; }  // re-apply after fmcomms2_sink init
+       if(!txAttApplied) {
+         setPlutoTxAtt(TxAtt);      // re-apply TxAtt after fmcomms2_sink init
+         sendNB1Params();            // restore NB1/COMP state from config
+         if(nb1Active) sendFifo("N1");
+         sendCOMPParams();
+         if(compActive) sendFifo("c1");
+         txAttApplied=1;
+       }
 
         //shift buffer
         for(int r=rows-1;r>0;r--)
@@ -4564,6 +4571,8 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     if(strstr(variable,"enableGPIOPTT")) sscanf(value,"%d",&enableGPIOPTT);
     if(strstr(variable,"enableCWKey")) sscanf(value,"%d",&enableCWKey);
     if(strstr(variable,"enablePlutoTx")) sscanf(value,"%d",&enablePlutoTx);
+    if(strstr(variable,"nb1Active"))    sscanf(value,"%d",&nb1Active);
+    if(strstr(variable,"compActive"))   sscanf(value,"%d",&compActive);
     if(strstr(variable,"nb1Algorithm")) sscanf(value,"%d",&nb1Algorithm);
     if(strstr(variable,"nb1FftSize"))   sscanf(value,"%d",&nb1FftSize);
     if(strstr(variable,"nb1Overlap"))   sscanf(value,"%d",&nb1Overlap);
@@ -4663,6 +4672,8 @@ fprintf(conffile,"RotateScreen %d\n",screenrotate);
 fprintf(conffile,"enableGPIOPTT %d\n",enableGPIOPTT);
 fprintf(conffile,"enableCWKey %d\n",enableCWKey);
 fprintf(conffile,"enablePlutoTx %d\n",enablePlutoTx);
+fprintf(conffile,"nb1Active %d\n",nb1Active);
+fprintf(conffile,"compActive %d\n",compActive);
 fprintf(conffile,"nb1Algorithm %d\n",nb1Algorithm);
 fprintf(conffile,"nb1FftSize %d\n",nb1FftSize);
 fprintf(conffile,"nb1Overlap %d\n",nb1Overlap);
