@@ -1940,14 +1940,14 @@ void processMouse(int mbut)
 {
   if(mbut==128)       //scroll whell turned 
     {
-      if((inputMode==FREQ) && (dialLock==0))
+      if(((inputMode==FREQ) || (inputMode==EXTRA)) && (dialLock==0))
       {
         freq=freq+(mouseScroll*freqInc);
         mouseScroll=0;
         if(((freq + bandRxOffset[band])/bandRxHarmonic[band]) < minHwFreq) freq=(minHwFreq - bandRxOffset[band])/bandRxHarmonic[band];
         if(((freq + bandRxOffset[band])/bandRxHarmonic[band]) > maxHwFreq) freq=(maxHwFreq - bandRxOffset[band])/bandRxHarmonic[band];
         setFreq(freq);
-        return;      
+        return;
       }
       
       if(mouseScroll>0) mouseScroll=1;                     //prevent large changes when adjusting. 
