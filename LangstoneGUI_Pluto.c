@@ -662,14 +662,16 @@ static const struct {
 void drawQO100BandPlan(void)
 {
     static double lastDrawnFreq = -1.0;
+    static int lastDrawnHz = -1;
 
     int nseg = (int)(sizeof(qo100bp) / sizeof(qo100bp[0]));
     int barY = FFTY + 20 + rows - 14;  // last 14 rows of waterfall
     int barH = 14;
 
-    // Redraw only when freq has changed (avoids flicker on every waterfall frame)
-    if (freq == lastDrawnFreq) return;
+    // Redraw when freq OR HzPerBin has changed (pano mode changes HzPerBin)
+    if (freq == lastDrawnFreq && HzPerBin == lastDrawnHz) return;
     lastDrawnFreq = freq;
+    lastDrawnHz = HzPerBin;
 
     // Clear bar so it disappears when leaving the QO-100 range
     for (int y = 0; y < barH; y++)
