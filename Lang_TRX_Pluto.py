@@ -198,7 +198,7 @@ class Lang_TRX_Pluto(gr.top_block):
                 window.WIN_HAMMING,
                 6.76))
         self.audio_source_0 = audio.source(48000, "hw:CARD=S3,DEV=0", True)
-        self.audio_sink_0 = audio.sink(48000, "hw:CARD=S3,DEV=0", False)
+        self.audio_sink_0 = audio.sink(48000, "langstone_out", False)
         self.analog_sig_source_x_1_0 = analog.sig_source_f(48000, analog.GR_SIN_WAVE, (CTCSS/10.0), (0.15 * (CTCSS >0)), 0, 0)
         self.analog_sig_source_x_1 = analog.sig_source_f(48000, analog.GR_COS_WAVE, 1750, (1.0*ToneBurst), 0, 0)
 
