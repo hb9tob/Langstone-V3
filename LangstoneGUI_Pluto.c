@@ -2550,8 +2550,43 @@ if((touchY>freqDisplayY) & (touchY < freqDisplayY+freqDisplayCharHeight) & (touc
   }
 
 
+// Clic sur spectre ou chute d'eau en mode pano : sélection de fréquence sur le pic
+if(panActive && band==24 &&
+   touchX >= FFTX && touchX < FFTX+points &&
+   touchY >= FFTY-spectrum_rows && touchY < FFTY+20+rows)
+  {
+  int clickBin = touchX - FFTX;  // bin cliqué (0..511)
+
+  // Chercher le pic dans panbuf[0] dans ±8 bins autour du clic
+  int peakBin = clickBin;
+  float peakVal = -200.0f;
+  for(int pb = clickBin-8; pb <= clickBin+8; pb++)
+    {
+    if(pb >= 0 && pb < points && panbuf[pb][0] > peakVal)
+      {
+      peakVal = panbuf[pb][0];
+      peakBin = pb;
+      }
+    }
+
+  // Convertir le bin en fréquence (bin 256 = QO100_NB_CENTER)
+  double peakFreq = QO100_NB_CENTER + (double)(peakBin - points/2) * PANO_HZ_PER_BIN / 1e6;
+
+  // Compensation selon le mode : carrier ≠ pic spectral en SSB/CW
+  if(mode==USB)       peakFreq -= 0.001;   // pic ≈ carrier+1kHz → recule d'1kHz
+  else if(mode==LSB)  peakFreq += 0.001;   // pic ≈ carrier-1kHz → avance d'1kHz
+  else if(mode==CW || mode==CWN) peakFreq -= 0.0008; // tonalité à carrier+800Hz
+
+  // Arrondir au kHz le plus proche
+  peakFreq = round(peakFreq * 1000.0) / 1000.0;
+
+  freq = peakFreq;
+  setFreq(freq);
+  return;
+  }
+
 //touch on spectrum display increments the FFT Bandwidth
-if((touchY < FFTY) & (touchY > FFTY - spectrum_rows) & (touchX > FFTX) & (touchX < FFTX + points))   
+if((touchY < FFTY) & (touchY > FFTY - spectrum_rows) & (touchX > FFTX) & (touchX < FFTX + points))
   {
     bandFFTBW[band]++;
     if(bandFFTBW[band] > 3)  bandFFTBW[band] = 0;
