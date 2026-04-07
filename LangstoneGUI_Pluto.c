@@ -4898,7 +4898,7 @@ void startGNURadio(void)
    {
       return;
    }
-   system("python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
+   system("nice -n -15 python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
 }
 
 void restartGNURadio(void)
