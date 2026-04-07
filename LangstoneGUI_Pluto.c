@@ -4898,7 +4898,7 @@ void startGNURadio(void)
    {
       return;
    }
-   system("sudo chrt -r 10 python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
+   system("sudo env GR_VMCIRCBUF=gr::vmcircbuf_mmap_shm_open_factory chrt -r 10 python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
 }
 
 void restartGNURadio(void)
