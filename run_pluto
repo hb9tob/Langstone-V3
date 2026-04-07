@@ -21,6 +21,7 @@ if !(ps -ax |grep -v grep| grep -q Lang_TRX_Pluto.py) then
    sudo amixer -c 2 cset numid=8 50%  > /dev/null 2>&1
    amixer -c 1 cset numid=4 0% > /dev/null 2>&1
    echo 1 | sudo tee /proc/sys/kernel/printk > /dev/null   # suppress kernel messages on framebuffer
+   echo performance | sudo tee /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor > /dev/null  # reduce audio dropouts
    # Reboot Pluto to ensure clean state at startup
    $HOME/Langstone/Screen_Message "Langstone Loading" "Rebooting Pluto..."
    ssh-keygen -f "$HOME/.ssh/known_hosts" -R $PLUTO_IP >/dev/null 2>&1
