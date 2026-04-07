@@ -296,6 +296,8 @@ int TxAtt=-89;
 int enableGPIOPTT=0;    // GPIO 17 PTT enabled (0=disabled, 1=enabled)
 int enableCWKey=0;      // CW key enabled (0=disabled, 1=enabled)
 int enablePlutoTx=0;    // Pluto TX output enabled (0=disabled, 1=enabled)
+int panActive=0;        // panoramic waterfall mode active
+double panoSavedFreq=0; // operating freq saved when entering pano mode
 int nb1Active=0;        // NB1 spectral noise reduction active
 int nb1Algorithm=1;     // 0=Wiener 1=Over-subtract 2=MMSE
 int nb1FftSize=512;     // 64/128/256/512/1024
@@ -370,7 +372,9 @@ int plutoGpo=0;
 float inbuf[2];
 FILE *fftstream;
 FILE *txfftstream;
+FILE *panstream;
 float buf[512][130];
+float panbuf[512][130];
 int points=512;
 int rows=130;
 int FFTRef = -30;
@@ -390,6 +394,9 @@ struct iio_device *plutophy;
 
 #define RXPORT 7373
 #define TXPORT 7474
+#define PANOPORT 7375
+#define PANO_HZ_PER_BIN 1031          // 528000 Hz / 512 bins
+#define QO100_NB_CENTER 10489.750     // centre transpondeur NB (MHz)
 
 #define FFTTIMEOUT 200                //timeout for FFT data 200 * 10ms = 2 seconds
 
@@ -621,7 +628,13 @@ int ret;
   {
   ret = fread(&inbuf,sizeof(float),1,fftstream);
   }
-  while (ret>0); 
+  while (ret>0);
+
+  do
+  {
+  ret = fread(&inbuf,sizeof(float),1,panstream);
+  }
+  while (ret>0);
 }
 
 
@@ -764,8 +777,31 @@ void waterfall()
             buf[p-points/2][0]=inbuf[0];
           }
         }
- 
- 
+
+        // lire les données FFT panoramiques (si mode pano actif, RX seulement)
+        if(panActive && transmitting==0)
+          {
+          int pret=fread(&inbuf,sizeof(float),1,panstream);
+          if(pret>0)
+            {
+            for(int r=rows-1;r>0;r--)
+              for(int p=0;p<points;p++)
+                panbuf[p][r]=panbuf[p][r-1];
+            panbuf[points/2][0]=inbuf[0];
+            for(int p=1;p<points;p++)
+              {
+              fread(&inbuf,sizeof(float),1,panstream);
+              if(p<points/2)
+                panbuf[p+points/2][0]=inbuf[0];
+              else
+                panbuf[p-points/2][0]=inbuf[0];
+              }
+            }
+          }
+
+        // sélectionner le buffer d'affichage
+        float (*displayBuf)[130] = (panActive && transmitting==0) ? panbuf : buf;
+
         if(((mode==CW)||(mode==CWN)) && (transmitting==1) && (satMode()==0))
           {
           bwbaroffset=800/HzPerBin;
@@ -804,17 +840,23 @@ void waterfall()
         {
           for(int p=0;p<points;p++)
           {
+            float val=displayBuf[p][r];
             //limit values displayed to range specified
-            if (buf[p][r]<baselevel) buf[p][r]=baselevel;
-            if (buf[p][r]>fftref) buf[p][r]=fftref;
+            if (val<baselevel) val=baselevel;
+            if (val>fftref) val=fftref;
 
             //scale to 0-255
-            level = (buf[p][r]-baselevel)*scaling;
+            level = (val-baselevel)*scaling;
             setPixel(p+FFTX,FFTY+20+r,palette[level*3+2],palette[level*3+1],palette[level*3]);
           }
         }
 
-        drawQO100BandPlan();
+        {
+          int savedHz=HzPerBin;
+          if(panActive && transmitting==0) HzPerBin=PANO_HZ_PER_BIN;
+          drawQO100BandPlan();
+          HzPerBin=savedHz;
+        }
 
         //clear spectrum area
         for(int r=0;r<spectrum_rows+1;r++)
@@ -826,105 +868,132 @@ void waterfall()
         }
     
         //draw spectrum line
-        
+
         scaling = spectrum_rows/(float)(fftref-baselevel);
         for(int p=0;p<points-1;p++)
-        {  
+        {
+            float v0=displayBuf[p][0];
+            float v1=displayBuf[p+1][0];
             //limit values displayed to range specified
-            if (buf[p][0]<baselevel) buf[p][0]=baselevel;
-            if (buf[p][0]>fftref) buf[p][0]=fftref;
-    
+            if (v0<baselevel) v0=baselevel;
+            if (v0>fftref) v0=fftref;
+            if (v1<baselevel) v1=baselevel;
+            if (v1>fftref) v1=fftref;
+
             //scale to display height
-            level = (buf[p][0]-baselevel)*scaling;   
-            level2 = (buf[p+1][0]-baselevel)*scaling;
+            level = (v0-baselevel)*scaling;
+            level2 = (v1-baselevel)*scaling;
             drawLine(p+FFTX, FFTY-level, p+1+FFTX, FFTY-level2,255,255,255);
         }
           
-          //draw Bandwidth indicator
+          //draw Bandwidth indicator / pano freq marker
           int p=points/2;
-          
-          bwBarStart=rxFilterLow/HzPerBin;
-          bwBarEnd=rxFilterHigh/HzPerBin;
-          
-          if(bwBarStart < -255) bwBarStart = -255;
-          if(bwBarEnd  > 255) bwBarEnd = 255;
-          
-        
-          
-          if (((mode==CW) || (mode==CWN)) && (transmitting==0 && satMode()== 0))
-          {
-           centreShift=800/HzPerBin;
-          }
-          else
-          {
-           centreShift=0;          
-          }
 
-          if(bwBarStart > -255) drawLine(p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows+5, p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows,255,140,0);
-          drawLine(p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows, p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows,255,140,0);
-          
-          if(bwBarEnd < 255) drawLine(p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows+5, p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows,255,140,0);  
-          //draw centre line (displayed frequency)
-          drawLine(p+FFTX+centreShift, FFTY-10, p+FFTX+centreShift, FFTY-spectrum_rows,255,0,0);  
-          
-          
-          //draw x Axis. 
-          int ticks[11] = {0,21,43,64,85,107,128,149,171,192,213};    // Rounded tick spacing at 21.333 pixels per tick 
+          int ticks[11] = {0,21,43,64,85,107,128,149,171,192,213};    // Rounded tick spacing at 21.333 pixels per tick
           drawLine(FFTX,FFTY +3,FFTX + points,FFTY+3,0,255,0);
           for(int tick = 0;tick < 11;tick++)
             {
              drawLine(FFTX + p + ticks[tick],FFTY+3,FFTX + p + ticks[tick],FFTY +5,0,255,0);
-             drawLine(FFTX + p - ticks[tick],FFTY+3,FFTX + p - ticks[tick],FFTY +5,0,255,0); 
+             drawLine(FFTX + p - ticks[tick],FFTY+3,FFTX + p - ticks[tick],FFTY +5,0,255,0);
             }
-          
-          //draw scale
-          setForeColour(0,255,0);
-          textSize=1;
-          gotoXY(p+FFTX-12,FFTY+8);
-          displayStr(" 0 ");
-          switch(bandFFTBW[band])
-          {
+
+          if(panActive && transmitting==0)
+            {
+            // mode panoramique : marqueur de fréquence d'exploitation et échelle large
+            if(band==24)
+              {
+              // marqueur jaune : fréquence de fonctionnement dans le transpondeur
+              int opPx = p + (int)((panoSavedFreq - QO100_NB_CENTER)*1e6 / PANO_HZ_PER_BIN);
+              if(opPx >= 0 && opPx < points)
+                drawLine(opPx+FFTX, FFTY-10, opPx+FFTX, FFTY-spectrum_rows, 255, 255, 0);
+              }
+            // échelle ±110kHz / ±220kHz
+            setForeColour(0,255,0);
+            textSize=1;
+            gotoXY(p+FFTX-12,FFTY+8);
+            displayStr(" 0 ");
+            gotoXY(p+FFTX-ticks[5]-20,FFTY+8);
+            displayStr("-110k  ");
+            gotoXY(p+FFTX-ticks[10]-20,FFTY+8);
+            displayStr("-220k  ");
+            gotoXY(p+FFTX+ticks[5]-20,FFTY+8);
+            displayStr("+110k  ");
+            gotoXY(p+FFTX+ticks[10]-20,FFTY+8);
+            displayStr("+220k  ");
+            }
+          else
+            {
+            bwBarStart=rxFilterLow/HzPerBin;
+            bwBarEnd=rxFilterHigh/HzPerBin;
+
+            if(bwBarStart < -255) bwBarStart = -255;
+            if(bwBarEnd  > 255) bwBarEnd = 255;
+
+            if (((mode==CW) || (mode==CWN)) && (transmitting==0 && satMode()== 0))
+              {
+               centreShift=800/HzPerBin;
+              }
+            else
+              {
+               centreShift=0;
+              }
+
+            if(bwBarStart > -255) drawLine(p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows+5, p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows,255,140,0);
+            drawLine(p+FFTX+bwBarStart-bwbaroffset, FFTY-spectrum_rows, p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows,255,140,0);
+
+            if(bwBarEnd < 255) drawLine(p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows+5, p+FFTX+bwBarEnd-bwbaroffset, FFTY-spectrum_rows,255,140,0);
+            //draw centre line (displayed frequency)
+            drawLine(p+FFTX+centreShift, FFTY-10, p+FFTX+centreShift, FFTY-spectrum_rows,255,0,0);
+
+            //draw scale
+            setForeColour(0,255,0);
+            textSize=1;
+            gotoXY(p+FFTX-12,FFTY+8);
+            displayStr(" 0 ");
+            switch(bandFFTBW[band])
+              {
               case 0:                 //48KHz BW
-              gotoXY(p+FFTX-ticks[5]-24,FFTY+8);
-              displayStr(" -10k   ");
-              gotoXY(p+FFTX-ticks[10]-24,FFTY+8);
-              displayStr(" -20k   ");
-              gotoXY(p+FFTX+ticks[5]-24,FFTY+8);
-              displayStr(" +10k   ");                                                                                             
-              gotoXY(p+FFTX+ticks[10]-24,FFTY+8);
-              displayStr(" +20k   ");
-            break;
-            case 1:                 //24KHz BW
-              gotoXY(p+FFTX-ticks[5]-20,FFTY+8);
-              displayStr(" -5k   ");
-              gotoXY(p+FFTX-ticks[10]-24,FFTY+8);
-              displayStr(" -10k   ");
-              gotoXY(p+FFTX+ticks[5]-20,FFTY+8);
-              displayStr(" +5k   ");                                                                                             
-              gotoXY(p+FFTX+ticks[10]-24,FFTY+8);
-              displayStr(" +10k   ");
-            break;
-            case 2:                 //12KHz BW
-              gotoXY(p+FFTX-ticks[5]-28,FFTY+8);
-              displayStr(" -2.5k   ");
-              gotoXY(p+FFTX-ticks[10]-20,FFTY+8);
-              displayStr(" -5k   ");
-              gotoXY(p+FFTX+ticks[5]-28,FFTY+8);
-              displayStr(" +2.5k   ");                                                                                             
-              gotoXY(p+FFTX+ticks[10]-20,FFTY+8);
-              displayStr(" +5k   ");
-            break;
-            case 3:                 //6KHz BW
-              gotoXY(p+FFTX-ticks[5]-32,FFTY+8);
-              displayStr(" -1.25k   ");
-              gotoXY(p+FFTX-ticks[10]-28,FFTY+8);
-              displayStr(" -2.5k   ");
-              gotoXY(p+FFTX+ticks[5]-32,FFTY+8);
-              displayStr(" +1.25k   ");                                                                                             
-              gotoXY(p+FFTX+ticks[10]-28,FFTY+8);
-              displayStr(" +2.5k   ");
-            break;
-          }
+                gotoXY(p+FFTX-ticks[5]-24,FFTY+8);
+                displayStr(" -10k   ");
+                gotoXY(p+FFTX-ticks[10]-24,FFTY+8);
+                displayStr(" -20k   ");
+                gotoXY(p+FFTX+ticks[5]-24,FFTY+8);
+                displayStr(" +10k   ");
+                gotoXY(p+FFTX+ticks[10]-24,FFTY+8);
+                displayStr(" +20k   ");
+              break;
+              case 1:                 //24KHz BW
+                gotoXY(p+FFTX-ticks[5]-20,FFTY+8);
+                displayStr(" -5k   ");
+                gotoXY(p+FFTX-ticks[10]-24,FFTY+8);
+                displayStr(" -10k   ");
+                gotoXY(p+FFTX+ticks[5]-20,FFTY+8);
+                displayStr(" +5k   ");
+                gotoXY(p+FFTX+ticks[10]-24,FFTY+8);
+                displayStr(" +10k   ");
+              break;
+              case 2:                 //12KHz BW
+                gotoXY(p+FFTX-ticks[5]-28,FFTY+8);
+                displayStr(" -2.5k   ");
+                gotoXY(p+FFTX-ticks[10]-20,FFTY+8);
+                displayStr(" -5k   ");
+                gotoXY(p+FFTX+ticks[5]-28,FFTY+8);
+                displayStr(" +2.5k   ");
+                gotoXY(p+FFTX+ticks[10]-20,FFTY+8);
+                displayStr(" +5k   ");
+              break;
+              case 3:                 //6KHz BW
+                gotoXY(p+FFTX-ticks[5]-32,FFTY+8);
+                displayStr(" -1.25k   ");
+                gotoXY(p+FFTX-ticks[10]-28,FFTY+8);
+                displayStr(" -2.5k   ");
+                gotoXY(p+FFTX+ticks[5]-32,FFTY+8);
+                displayStr(" +1.25k   ");
+                gotoXY(p+FFTX+ticks[10]-28,FFTY+8);
+                displayStr(" +2.5k   ");
+              break;
+              }
+            }
 
  
 
@@ -1478,10 +1547,20 @@ void initUDP(void)
    myaddr.sin_family = AF_INET;                                   //Network Connection
    myaddr.sin_addr.s_addr = htonl(INADDR_ANY);                   //Any Address
    myaddr.sin_port = htons(TXPORT);                               //set UDP POrt to listen on
-   bind(fdr,(struct sockaddr *)&myaddr,sizeof(myaddr));          //bind the socket to the address  
+   bind(fdr,(struct sockaddr *)&myaddr,sizeof(myaddr));          //bind the socket to the address
    txfftstream=fdopen(fdr,"r");                                  //open as a stream
    fcntl(fileno(txfftstream), F_SETFL, O_RDONLY | O_NONBLOCK);   //set it as nonblocking
-      
+
+//initialise Receive UDP receiver for panoramic FFT stream (528kHz, port 7375)
+   fdr=socket(AF_INET,SOCK_DGRAM,0);
+   memset((char *)&myaddr,0,sizeof(myaddr));
+   myaddr.sin_family = AF_INET;
+   myaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+   myaddr.sin_port = htons(PANOPORT);
+   bind(fdr,(struct sockaddr *)&myaddr,sizeof(myaddr));
+   panstream=fdopen(fdr,"r");
+   fcntl(fileno(panstream), F_SETFL, O_RDONLY | O_NONBLOCK);
+
 }
 
 
@@ -2291,6 +2370,33 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*3,funcButtonsY))    // Button4 =SET o
       displayCOMPSetting(compSettingNo);
       return;
       }
+    else if(inputMode==EXTRA)
+      {
+      panActive=!panActive;
+      if(panActive)
+        {
+        panoSavedFreq=freq;
+        if(band==24)  // QO100 : centrer le LO sur le transpondeur NB
+          {
+          freq=QO100_NB_CENTER;
+          long long panoLO=(long long)((QO100_NB_CENTER+bandRxOffset[band])*1e6);
+          setPlutoRxFreq(panoLO);
+          lastLOhz=panoLO;
+          sendFifo("O0");
+          displayFreq(freq);
+          }
+        }
+      else
+        {
+        if(band==24)
+          {
+          freq=panoSavedFreq;
+          setFreq(freq);
+          }
+        }
+      showExtraMenu();
+      return;
+      }
     else
       {
       setInputMode(FREQ);
@@ -2551,6 +2657,7 @@ void displayArrowButtons(void)
 
 void setBand(int b)
 {
+  if(panActive) { panActive=0; }   // exit pano on band change
   freq=bandFreq[band];
   setFreq(freq);
   mode=bandMode[band];
@@ -3961,8 +4068,9 @@ void showExtraMenu(void)
     displayButton("NB1");
     if(compActive) setForeColour(255,0,0); else setForeColour(0,0,255);
     displayButton("COMP");
+    if(panActive) setForeColour(255,0,0); else setForeColour(0,0,255);
+    displayButton("PAN ");
     setForeColour(0,0,255);
-    displayButton("    ");
     displayButton("    ");
     displayButton("    ");
     setForeColour(255,165,0);
