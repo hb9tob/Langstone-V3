@@ -395,7 +395,7 @@ struct iio_device *plutophy;
 #define RXPORT 7373
 #define TXPORT 7474
 #define PANOPORT 7375
-#define PANO_HZ_PER_BIN 1031          // 528000 Hz / 512 bins
+#define PANO_HZ_PER_BIN 516           // 264000 Hz / 512 bins (528kHz décimé par 2)
 #define QO100_NB_CENTER 10489.750     // centre transpondeur NB (MHz)
 
 #define FFTTIMEOUT 200                //timeout for FFT data 200 * 10ms = 2 seconds
@@ -913,13 +913,13 @@ void waterfall()
             gotoXY(p+FFTX-12,FFTY+8);
             displayStr(" 0 ");
             gotoXY(p+FFTX-ticks[5]-20,FFTY+8);
-            displayStr("-110k  ");
+            displayStr(" -55k  ");
             gotoXY(p+FFTX-ticks[10]-20,FFTY+8);
-            displayStr("-220k  ");
+            displayStr("-110k  ");
             gotoXY(p+FFTX+ticks[5]-20,FFTY+8);
-            displayStr("+110k  ");
+            displayStr(" +55k  ");
             gotoXY(p+FFTX+ticks[10]-20,FFTY+8);
-            displayStr("+220k  ");
+            displayStr("+110k  ");
             }
           else
             {

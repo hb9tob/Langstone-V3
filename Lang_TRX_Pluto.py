@@ -220,9 +220,11 @@ class Lang_TRX_Pluto(gr.top_block):
         self.analog_const_source_x_0 = analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0)
         self.analog_agc3_xx_0 = analog.agc3_cc((1e-2), (5e-7), 0.1, 1.0, 1)
         self.analog_agc3_xx_0.set_max_gain(1000)
-        # Panoramic FFT path: raw 528kHz → 512-bin FFT → UDP port 7375
+        # Panoramic FFT path: raw 528kHz → decimate by 2 → 264kHz → 512-bin FFT → UDP port 7375
+        # Decimation by 2 halves the stream_to_vector rate (1031→515 /sec), reducing Pi CPU load
+        self.pano_keep = blocks.keep_one_in_n(gr.sizeof_gr_complex*1, 2)
         self.logpwrfft_pano = logpwrfft.logpwrfft_c(
-            sample_rate=528000,
+            sample_rate=264000,
             fft_size=512,
             ref_scale=2,
             frame_rate=10,
@@ -285,7 +287,8 @@ class Lang_TRX_Pluto(gr.top_block):
         self.connect((self.logpwrfft_x_0_0, 0), (self.blocks_vector_to_stream_0_0, 0))
         self.connect((self.low_pass_filter_0, 0), (self.audio_sink_0, 0))
         self.connect((self.rational_resampler_xxx_0, 0), (self.iio_pluto_sink_0, 0))
-        self.connect((self.iio_pluto_source_0, 0), (self.logpwrfft_pano, 0))
+        self.connect((self.iio_pluto_source_0, 0), (self.pano_keep, 0))
+        self.connect((self.pano_keep, 0), (self.logpwrfft_pano, 0))
         self.connect((self.logpwrfft_pano, 0), (self.blocks_vector_to_stream_pano, 0))
         self.connect((self.blocks_vector_to_stream_pano, 0), (self.network_udp_sink_pano, 0))
 
