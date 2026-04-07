@@ -395,7 +395,7 @@ struct iio_device *plutophy;
 #define RXPORT 7373
 #define TXPORT 7474
 #define PANOPORT 7375
-#define PANO_HZ_PER_BIN 516           // 264000 Hz / 512 bins (528kHz décimé par 2)
+#define PANO_HZ_PER_BIN 1031          // 528000 Hz / 512 bins
 #define QO100_NB_CENTER 10489.750     // centre transpondeur NB (MHz)
 
 #define FFTTIMEOUT 200                //timeout for FFT data 200 * 10ms = 2 seconds
@@ -913,13 +913,13 @@ void waterfall()
             gotoXY(p+FFTX-12,FFTY+8);
             displayStr(" 0 ");
             gotoXY(p+FFTX-ticks[5]-20,FFTY+8);
-            displayStr(" -55k  ");
-            gotoXY(p+FFTX-ticks[10]-20,FFTY+8);
             displayStr("-110k  ");
+            gotoXY(p+FFTX-ticks[10]-20,FFTY+8);
+            displayStr("-220k  ");
             gotoXY(p+FFTX+ticks[5]-20,FFTY+8);
-            displayStr(" +55k  ");
-            gotoXY(p+FFTX+ticks[10]-20,FFTY+8);
             displayStr("+110k  ");
+            gotoXY(p+FFTX+ticks[10]-20,FFTY+8);
+            displayStr("+220k  ");
             }
           else
             {
@@ -2376,6 +2376,7 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*3,funcButtonsY))    // Button4 =SET o
       if(panActive)
         {
         panoSavedFreq=freq;
+        sendFifo("P1");   // activer le chemin FFT panoramique dans GNU Radio
         if(band==24)  // QO100 : centrer le LO sur le transpondeur NB
           {
           freq=QO100_NB_CENTER;
@@ -2388,6 +2389,12 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*3,funcButtonsY))    // Button4 =SET o
         }
       else
         {
+        sendFifo("P0");   // désactiver le chemin FFT panoramique
+        // vider le buffer pano et effacer l'affichage
+        { int dr; do { float tmp; dr=fread(&tmp,sizeof(float),1,panstream); } while(dr>0); }
+        for(int r=0;r<rows;r++)
+          for(int p=0;p<points;p++)
+            panbuf[p][r]=-100.0f;
         if(band==24)
           {
           freq=panoSavedFreq;
@@ -2657,7 +2664,13 @@ void displayArrowButtons(void)
 
 void setBand(int b)
 {
-  if(panActive) { panActive=0; }   // exit pano on band change
+  if(panActive)
+    {
+    panActive=0;
+    sendFifo("P0");
+    int dr; do { float tmp; dr=fread(&tmp,sizeof(float),1,panstream); } while(dr>0);
+    for(int r=0;r<rows;r++) for(int p=0;p<points;p++) panbuf[p][r]=-100.0f;
+    }
   freq=bandFreq[band];
   setFreq(freq);
   mode=bandMode[band];
@@ -4830,6 +4843,13 @@ void startGNURadio(void)
 
 void restartGNURadio(void)
 {
+   if(panActive)   // quitter le mode pano proprement avant le redémarrage
+     {
+     panActive=0;
+     int dr; do { float tmp; dr=fread(&tmp,sizeof(float),1,panstream); } while(dr>0);
+     for(int r=0;r<rows;r++) for(int p=0;p<points;p++) panbuf[p][r]=-100.0f;
+     if(band==24) { freq=panoSavedFreq; }
+     }
    setBandBits(0);
    sendFifo("H0");        //unlock the flowgraph so that it can exit
    sendFifo("Q");       //kill the SDR

@@ -220,14 +220,14 @@ class Lang_TRX_Pluto(gr.top_block):
         self.analog_const_source_x_0 = analog.sig_source_f(0, analog.GR_CONST_WAVE, 0, 0, 0)
         self.analog_agc3_xx_0 = analog.agc3_cc((1e-2), (5e-7), 0.1, 1.0, 1)
         self.analog_agc3_xx_0.set_max_gain(1000)
-        # Panoramic FFT path: raw 528kHz → decimate by 2 → 264kHz → 512-bin FFT → UDP port 7375
-        # Decimation by 2 halves the stream_to_vector rate (1031→515 /sec), reducing Pi CPU load
-        self.pano_keep = blocks.keep_one_in_n(gr.sizeof_gr_complex*1, 2)
+        # Panoramic FFT path: 528kHz → 512-bin FFT → UDP port 7375
+        # Inactive by default (n=10000000 = quasi-arrêté). Activé par commande FIFO P1/P0.
+        self.pano_keep = blocks.keep_one_in_n(gr.sizeof_gr_complex*1, 10000000)
         self.logpwrfft_pano = logpwrfft.logpwrfft_c(
-            sample_rate=264000,
+            sample_rate=528000,
             fft_size=512,
             ref_scale=2,
-            frame_rate=10,
+            frame_rate=5,
             avg_alpha=0.7,
             average=True,
             shift=False)
@@ -730,6 +730,12 @@ def docommands(tb):
               tb.set_nb1_param(4, int(line[1:]))
            if line[0]=='z':
               tb.set_nb1_param(5, int(line[1:]))
+           if line[0]=='P':
+              value=int(line[1:])
+              if value==1:
+                  tb.pano_keep.set_n(1)       # pano actif : débit plein 528kHz
+              else:
+                  tb.pano_keep.set_n(10000000) # pano inactif : quasi-arrêté
                                                                                 
        except:
          break
