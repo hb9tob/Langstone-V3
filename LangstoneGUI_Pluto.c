@@ -781,7 +781,7 @@ void waterfall()
         }
 
         // lire les données FFT panoramiques (si mode pano actif, RX seulement)
-        if(panActive && transmitting==0)
+        if(panActive && (transmitting==0 || satMode()==1))
           {
           int pret=fread(&inbuf,sizeof(float),1,panstream);
           if(pret>0)
@@ -802,7 +802,7 @@ void waterfall()
           }
 
         // sélectionner le buffer d'affichage
-        float (*displayBuf)[130] = (panActive && transmitting==0) ? panbuf : buf;
+        float (*displayBuf)[130] = (panActive && (transmitting==0 || satMode()==1)) ? panbuf : buf;
 
         if(((mode==CW)||(mode==CWN)) && (transmitting==1) && (satMode()==0))
           {
@@ -855,9 +855,16 @@ void waterfall()
 
         {
           int savedHz=HzPerBin;
-          if(panActive && transmitting==0) HzPerBin=PANO_HZ_PER_BIN;
+          double savedFreqBP=freq;
+          int panVis=panActive && (transmitting==0 || satMode()==1);
+          if(panVis)
+            {
+            HzPerBin=PANO_HZ_PER_BIN;
+            if(band==24) freq=QO100_NB_CENTER; // le LO pano est centré ici
+            }
           drawQO100BandPlan();
           HzPerBin=savedHz;
+          freq=savedFreqBP;
         }
 
         //clear spectrum area
@@ -899,13 +906,13 @@ void waterfall()
              drawLine(FFTX + p - ticks[tick],FFTY+3,FFTX + p - ticks[tick],FFTY +5,0,255,0);
             }
 
-          if(panActive && transmitting==0)
+          if(panActive && (transmitting==0 || satMode()==1))
             {
             // mode panoramique : marqueur de fréquence d'exploitation et échelle large
             if(band==24)
               {
-              // marqueur jaune : fréquence de fonctionnement dans le transpondeur
-              int opPx = p + (int)((panoSavedFreq - QO100_NB_CENTER)*1e6 / PANO_HZ_PER_BIN);
+              // marqueur jaune : fréquence reçue dans le transpondeur
+              int opPx = p + (int)((freq - QO100_NB_CENTER)*1e6 / PANO_HZ_PER_BIN);
               if(opPx >= 0 && opPx < points)
                 drawLine(opPx+FFTX, FFTY-10, opPx+FFTX, FFTY-spectrum_rows, 255, 255, 0);
               }
@@ -2381,12 +2388,16 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*3,funcButtonsY))    // Button4 =SET o
         sendFifo("P1");   // activer le chemin FFT panoramique dans GNU Radio
         if(band==24)  // QO100 : centrer le LO sur le transpondeur NB
           {
-          freq=QO100_NB_CENTER;
+          // LO → centre du transpondeur ; RxOffset conserve la fréquence reçue
           long long panoLO=(long long)((QO100_NB_CENTER+bandRxOffset[band])*1e6);
           setPlutoRxFreq(panoLO);
           lastLOhz=panoLO;
-          sendFifo("O0");
-          displayFreq(freq);
+          long long frRxhz=(long long)((freq+bandRxOffset[band])*1e6);
+          long long rxOffsHz=frRxhz-panoLO;
+          char panoOStr[32];
+          sprintf(panoOStr,"O%lld",rxOffsHz);
+          sendFifo(panoOStr);
+          // freq reste inchangée → l'utilisateur continue d'entendre sa fréquence
           }
         }
       else
@@ -2398,10 +2409,7 @@ if(buttonTouched(funcButtonsX+buttonSpaceX*3,funcButtonsY))    // Button4 =SET o
           for(int p=0;p<points;p++)
             panbuf[p][r]=-100.0f;
         if(band==24)
-          {
-          freq=panoSavedFreq;
-          setFreq(freq);
-          }
+          setFreq(freq);   // restaure le LO normal (freq est déjà la bonne fréquence)
         }
       showExtraMenu();
       return;
@@ -3163,6 +3171,20 @@ void setTx(int pt)
 
 void setHwRxFreq(double fr)
 {
+  // Mode panoramique QO100 : LO fixé au centre du transpondeur, seul le RxOffset change
+  if(panActive && band==24)
+    {
+    long long panoLO=(long long)((QO100_NB_CENTER+bandRxOffset[band])*1e6);
+    long long frRxhz=(long long)((fr+bandRxOffset[band])*1e6);
+    long long rxOffsHz=frRxhz-panoLO;
+    rxOffsHz+=rit;
+    if((mode==CW)||(mode==CWN)) rxOffsHz-=800;
+    char offsetStr[32];
+    sprintf(offsetStr,"O%lld",rxOffsHz);
+    sendFifo(offsetStr);
+    return;  // LO du Pluto inchangé
+    }
+
   long long rxoffsethz;
   long long LOrxfreqhz;
   long long rxfreqhz;
@@ -4850,7 +4872,7 @@ void restartGNURadio(void)
      panActive=0;
      int dr; do { float tmp; dr=fread(&tmp,sizeof(float),1,panstream); } while(dr>0);
      for(int r=0;r<rows;r++) for(int p=0;p<points;p++) panbuf[p][r]=-100.0f;
-     if(band==24) { freq=panoSavedFreq; }
+     // freq est déjà la bonne fréquence (non modifiée par le mode pano)
      }
    setBandBits(0);
    sendFifo("H0");        //unlock the flowgraph so that it can exit
