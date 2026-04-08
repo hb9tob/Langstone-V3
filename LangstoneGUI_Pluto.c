@@ -164,10 +164,10 @@ int lastmode=0;
 char * modename[nummode]={"USB","LSB","CW ","CWN","FM ","AM "};
 enum {USB,LSB,CW,CWN,FM,AM};
 
-#define numSettings 28
+#define numSettings 31
 
-char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","FFT Range= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= ", "Mic Capture= "};
-enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,FFT_RANGE,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX,ALSA_CAPTURE};
+char * settingText[numSettings]={"Rotate Screen = ","Rx Gain= ","SSB Mic Gain= ","FM Mic Gain= ","AM Mic Gain= ","Repeater Shift= ","CTCSS= "," Rx Offset= ","Rx Harmonic Mixing= "," Tx Offset= ","Tx Harmonic Mixing= ","Band Bits (Rx)= ","Band Bits (Tx)= ","Copy Band Bits to Pluto=","FFT Ref= ","FFT Range= ","Tx Att= ","S-Meter Zero= ", "SSB Rx Filter Low= ", "SSB Rx Filter High= ","CW Ident= ", "CWID Carrier= ", "CW Break-In Hang Time= ", "24 Bands= ", "GPIO PTT= ", "CW Key= ", "Pluto TX Out= ", "Mic Capture= ", "Pano FFT Ref= ", "Pano FFT Range= ", "Loop Time= "};
+enum {ROTATE,RX_GAIN,SSB_MIC,FM_MIC,AM_MIC,REP_SHIFT,CTCSS,RX_OFFSET,RX_HARMONIC,TX_OFFSET,TX_HARMONIC,BAND_BITS_RX,BAND_BITS_TX,BAND_BITS_TO_PLUTO,FFT_REF,FFT_RANGE,TX_ATT,S_ZERO,SSB_FILT_LOW,SSB_FILT_HIGH,CWID,CW_CARRIER,BREAK_IN_TIME,BANDS24,ENABLE_GPIO_PTT,ENABLE_CW_KEY,ENABLE_PLUTO_TX,ALSA_CAPTURE,PANO_FFT_REF,PANO_FFT_RANGE,LOOP_TIME};
 int settingNo=RX_GAIN;
 int setIndex=0;
 int maxSetIndex=10;
@@ -380,6 +380,9 @@ int points=512;
 int rows=130;
 int FFTRef = -30;
 int FFTRange = 80;
+int panoFFTRef = -40;
+int panoFFTRange = 60;
+int loopTimeMs = 10;                        // main loop interval in ms (default 100 Hz)
 int spectrum_rows=80;
 unsigned char * palette;
 int HzPerBin=94;                        //calculated from FFT width and number of samples. Width=48000 number of samples =512
@@ -571,7 +574,7 @@ int main(int argc, char* argv[])
     }
    
     
-    while(runTimeMs() < (lastClock + 10))                //delay until the next iteration at 100 per second (10ms)
+    while(runTimeMs() < (lastClock + loopTimeMs))        //delay until next iteration (loopTimeMs controls refresh rate)
     {
     usleep(100);
     }
@@ -734,7 +737,7 @@ void waterfall()
       else
         {
           ret = fread(&inbuf,sizeof(float),1,fftstream);
-          fftref=FFTRef;
+          fftref = (panActive && satMode()==0) ? panoFFTRef : FFTRef;
         }
       
       if(ret>0)
@@ -832,7 +835,8 @@ void waterfall()
         //RF level adjustment
     
  
-        baselevel=fftref-FFTRange;
+        int activeRange = (panActive && (transmitting==0 || satMode()==1)) ? panoFFTRange : FFTRange;
+        baselevel=fftref-activeRange;
         scaling = 255.0/(float)(fftref-baselevel);
         
         
@@ -4052,6 +4056,33 @@ if(settingNo==BAND_BITS_TX)        // Band Bits Tx
       displaySetting(settingNo);
       }
 
+  if(settingNo==PANO_FFT_REF)          // Pano FFT Reference Level
+      {
+      panoFFTRef += mouseScroll;
+      mouseScroll=0;
+      if(panoFFTRef < -80) panoFFTRef=-80;
+      if(panoFFTRef >  30) panoFFTRef=30;
+      displaySetting(settingNo);
+      }
+
+  if(settingNo==PANO_FFT_RANGE)        // Pano FFT Dynamic Range
+      {
+      panoFFTRange += mouseScroll;
+      mouseScroll=0;
+      if(panoFFTRange <  10) panoFFTRange=10;
+      if(panoFFTRange > 120) panoFFTRange=120;
+      displaySetting(settingNo);
+      }
+
+  if(settingNo==LOOP_TIME)             // Main loop interval (ms) — controls display refresh rate
+      {
+      loopTimeMs += mouseScroll;
+      mouseScroll=0;
+      if(loopTimeMs <  5) loopTimeMs=5;
+      if(loopTimeMs > 80) loopTimeMs=80;
+      displaySetting(settingNo);
+      }
+
   if(settingNo==ROTATE)        // Rotate Screen
       {
       if(mouseScroll > 0)   screenrotate= 1;
@@ -4635,6 +4666,24 @@ if(se==ALSA_CAPTURE)
     displayStr(valStr);
   }
 
+if(se==PANO_FFT_REF)
+  {
+    sprintf(valStr,"%d dB",panoFFTRef);
+    displayStr(valStr);
+  }
+
+if(se==PANO_FFT_RANGE)
+  {
+    sprintf(valStr,"%d dB",panoFFTRange);
+    displayStr(valStr);
+  }
+
+if(se==LOOP_TIME)
+  {
+    sprintf(valStr,"%d ms (%d Hz)",loopTimeMs, 1000/loopTimeMs);
+    displayStr(valStr);
+  }
+
  if(se==ROTATE)
   {
     if(screenrotate == 0)
@@ -4776,6 +4825,9 @@ while(fscanf(conffile,"%49s %99s [^\n]\n",variable,value) !=EOF)
     if(strstr(variable,"compEq3Gain"))    sscanf(value,"%d",&compEq3Gain);
     if(strstr(variable,"compMicGain"))    sscanf(value,"%d",&compMicGain);
     if(strstr(variable,"alsaCaptureLevel")) sscanf(value,"%d",&alsaCaptureLevel);
+    if(strstr(variable,"panoFFTRef"))       sscanf(value,"%d",&panoFFTRef);
+    if(strstr(variable,"panoFFTRange"))     sscanf(value,"%d",&panoFFTRange);
+    if(strstr(variable,"loopTimeMs"))       sscanf(value,"%d",&loopTimeMs);
     if(mode>nummode-1) mode=0;
             
   }
@@ -4877,6 +4929,9 @@ fprintf(conffile,"compEq3Freq %d\n",compEq3Freq);
 fprintf(conffile,"compEq3Gain %d\n",compEq3Gain);
 fprintf(conffile,"compMicGain %d\n",compMicGain);
 fprintf(conffile,"alsaCaptureLevel %d\n",alsaCaptureLevel);
+fprintf(conffile,"panoFFTRef %d\n",panoFFTRef);
+fprintf(conffile,"panoFFTRange %d\n",panoFFTRange);
+fprintf(conffile,"loopTimeMs %d\n",loopTimeMs);
 
 fclose(conffile);
 return 0;
