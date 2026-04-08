@@ -1,0 +1,39 @@
+#!/bin/bash
+clear
+echo
+echo "Langstone Connection Mode"
+echo "-------------------------"
+echo "1) Ethernet / WiFi  (Pluto via reseau - plus de buffering pour absorber la gigue TCP)"
+echo "   Buffer IIO: 0x2000 (15.5ms)  |  Buffer ALSA: 16384 echantillons (341ms)"
+echo
+echo "2) USB               (Pluto via cable USB - latence minimale)"
+echo "   Buffer IIO: 0x800  (3.9ms)   |  Buffer ALSA: 4096 echantillons (85ms)"
+echo
+
+read -p "Choisir le mode (1 ou 2) : " MODE
+
+case $MODE in
+  1)
+    sed -i "s/export IIO_BUF_SIZE=.*/export IIO_BUF_SIZE=0x2000    # ethernet mode; use set_mode to switch to USB (0x800)/" \
+        $HOME/Langstone/run
+    sudo sed -i "s/buffer_size [0-9]*/buffer_size 16384/" /etc/asound.conf
+    echo
+    echo "Mode Ethernet configure."
+    echo "Buffer IIO: 0x2000  |  Buffer ALSA: 16384"
+    ;;
+  2)
+    sed -i "s/export IIO_BUF_SIZE=.*/export IIO_BUF_SIZE=0x800     # USB mode; use set_mode to switch to Ethernet (0x2000)/" \
+        $HOME/Langstone/run
+    sudo sed -i "s/buffer_size [0-9]*/buffer_size 4096/" /etc/asound.conf
+    echo
+    echo "Mode USB configure."
+    echo "Buffer IIO: 0x800   |  Buffer ALSA: 4096"
+    ;;
+  *)
+    echo "Choix invalide."
+    exit 1
+    ;;
+esac
+echo
+echo "Redemarrer Langstone pour appliquer les changements."
+echo

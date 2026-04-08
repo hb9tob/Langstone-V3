@@ -42,6 +42,7 @@ class Lang_TRX_Pluto(gr.top_block):
         if plutoip==None :
           plutoip='pluto.local'
         plutoip='ip:' + plutoip
+        iio_buf_size = int(sys.argv[1], 16) if len(sys.argv) > 1 else 0x2000
         self.Tx_Mode = Tx_Mode = 0
         self.Tx_LO = Tx_LO = 1000000000
         self.Tx_Gain = Tx_Gain = 0
@@ -119,7 +120,7 @@ class Lang_TRX_Pluto(gr.top_block):
             avg_alpha=0.9,
             average=True,
             shift=False)
-        self.iio_pluto_source_0 = iio.fmcomms2_source_fc32(plutoip, [True, True], 0x2000)
+        self.iio_pluto_source_0 = iio.fmcomms2_source_fc32(plutoip, [True, True], iio_buf_size)
         self.iio_pluto_source_0.set_len_tag_key('packet_len')
         self.iio_pluto_source_0.set_frequency(Rx_LO)
         self.iio_pluto_source_0.set_samplerate(528000)

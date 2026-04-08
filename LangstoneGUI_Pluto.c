@@ -4893,12 +4893,18 @@ void setAlsaCapture(int level)
 
 void startGNURadio(void)
 {
+   char cmd[512];
+   const char *iio_buf = getenv("IIO_BUF_SIZE");
+   if (!iio_buf) iio_buf = "0x2000";                          // default: ethernet mode
    FFTTimeout = FFTTIMEOUT * 10;                               //allow time to start (20 seconds)
    if(system("ps -ax | grep -v grep | grep -q Lang_TRX_Pluto.py") == 0)
    {
       return;
    }
-   system("sudo chrt -r 10 python $HOME/Langstone/Lang_TRX_Pluto.py > /tmp/LangstoneTRX_Pluto.log 2>&1 &");
+   snprintf(cmd, sizeof(cmd),
+       "sudo chrt -r 10 python $HOME/Langstone/Lang_TRX_Pluto.py %s > /tmp/LangstoneTRX_Pluto.log 2>&1 &",
+       iio_buf);
+   system(cmd);
 }
 
 void restartGNURadio(void)

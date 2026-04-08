@@ -111,12 +111,46 @@ chmod +x stop
 chmod +x update
 chmod +x set_pluto
 chmod +x set_sound
+chmod +x set_mode
 chmod +x run_hack
 chmod +x stop_hack
 chmod +x run_pluto
 chmod +x stop_pluto
 
 ./build
+
+echo "#################################"
+echo "##     Configure ALSA          ##"
+echo "#################################"
+
+# Create system-wide ALSA virtual device accessible to all users (including root/sudo)
+# Default: ethernet mode buffer (341ms) - use set_mode to switch to USB (85ms)
+sudo tee /etc/asound.conf > /dev/null << 'ALSA_EOF'
+pcm.langstone_out {
+    type plug
+    slave {
+        pcm "hw:CARD=S3,DEV=0"
+        period_size 2048
+        buffer_size 16384
+    }
+}
+ALSA_EOF
+
+
+echo "#################################"
+echo "##     Configure GNU Radio     ##"
+echo "#################################"
+
+# Force GNU Radio to use mmap_shm_open vmcircbuf factory (SysV shmat fails on this kernel)
+if ! grep -q vmcircbuf_default_factory /etc/gnuradio/conf.d/gnuradio-runtime.conf; then
+    sudo sed -i '/^max_messages/a vmcircbuf_default_factory = gr::vmcircbuf_mmap_shm_open_factory' \
+        /etc/gnuradio/conf.d/gnuradio-runtime.conf
+fi
+
+sudo mkdir -p /root/.config/gnuradio
+printf '[DEFAULT]\nvmcircbuf_default_factory = gr::vmcircbuf_mmap_shm_open_factory\n' | \
+    sudo tee /root/.config/gnuradio/config.conf > /dev/null
+
 
 # Set auto login to command line
 

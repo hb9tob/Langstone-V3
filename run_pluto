@@ -8,6 +8,7 @@
 $HOME/Langstone/Screen_Message "Langstone Loading"
 
 export PLUTO_IP=pluto.local
+export IIO_BUF_SIZE=0x2000    # ethernet mode; use set_mode to switch to USB (0x800)
 
 #Create command pipe
 if test -e /tmp/langstoneTRx ;then
