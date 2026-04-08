@@ -270,6 +270,38 @@ To access this band, **24 Bands** must be enabled in the SET menu (`24 Bands = 1
 
 The band popup now shows readable names for all 25 bands (e.g. "70", "144", "432", "QO100") instead of the raw MHz value.
 
+## Audio buffering and USB/Ethernet mode
+
+GNU Radio runs as root (via `sudo`) to obtain real-time scheduling priority. On a fresh Raspberry Pi OS install, root has no ALSA configuration, so the `langstone_out` virtual device defined in `~/.asoundrc` is invisible to GNU Radio. The install script now creates `/etc/asound.conf` (system-wide, readable by all users including root), which defines the `langstone_out` plug device.
+
+Two buffer profiles are available depending on how the Pluto is connected:
+
+| Mode | IIO buffer | ALSA buffer | Typical use |
+|---|---|---|---|
+| Ethernet / WiFi | 0x2000 (15.5 ms) | 16384 samples (341 ms) | Pluto connected via network — absorbs TCP jitter |
+| USB | 0x800 (3.9 ms) | 4096 samples (85 ms) | Pluto connected via USB cable — minimum latency |
+
+Use the **`set_mode`** script to switch between the two profiles:
+
+```bash
+cd ~/Langstone
+./set_mode
+```
+
+The script updates `~/Langstone/run` (IIO buffer size) and `/etc/asound.conf` (ALSA buffer) and takes effect on the next Langstone restart.
+
+The default after a fresh install is **Ethernet mode**.
+
+## GNU Radio vmcircbuf fix
+
+On the Raspberry Pi kernel used here, the SysV shared memory double-mapping (`shmat`) used by GNU Radio's default circular buffer implementation fails with `EINVAL`. This causes GNU Radio to fall back to a less efficient buffer allocation, producing log noise (`gr::vmcircbuf :error: shmat (2): Invalid argument`).
+
+The install script forces the `mmap_shm_open` factory (POSIX shared memory + `mmap`) by adding a line to `/etc/gnuradio/conf.d/gnuradio-runtime.conf`:
+
+```
+vmcircbuf_default_factory = gr::vmcircbuf_mmap_shm_open_factory
+```
+
 ## TX safety defaults
 
 Three safety parameters have been added to the Settings menu, all **disabled by default**:
@@ -360,7 +392,7 @@ The NB1 and COMP parameter menus are cross-navigable via the **COMP>** / **NB1>*
 Log into the Pi using SSH, then:
 
 ```bash
-cd ~/Langstone && git pull && cc LangstoneGUI_Pluto.c -o GUI_Pluto -liio -llgpio
+cd ~/Langstone && git pull && cc LangstoneGUI_Pluto.c -o GUI_Pluto -liio -llgpio -lm
 ```
 
 If only `run_pluto` or `Lang_TRX_Pluto.py` changed (no C recompile needed):
