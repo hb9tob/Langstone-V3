@@ -119,7 +119,7 @@ class Lang_TRX_Pluto(gr.top_block):
             avg_alpha=0.9,
             average=True,
             shift=False)
-        self.iio_pluto_source_0 = iio.fmcomms2_source_fc32(plutoip, [True, True], 0x800)
+        self.iio_pluto_source_0 = iio.fmcomms2_source_fc32(plutoip, [True, True], 0x2000)
         self.iio_pluto_source_0.set_len_tag_key('packet_len')
         self.iio_pluto_source_0.set_frequency(Rx_LO)
         self.iio_pluto_source_0.set_samplerate(528000)
